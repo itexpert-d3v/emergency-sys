@@ -41,6 +41,7 @@ class TrackingController extends Controller
             'submitted_at' => $report->submitted_at?->toISOString(),
             'expires_at' => $report->expires_at?->toISOString(),
             'timeline' => $this->timeline($report),
+            'public_updates' => $this->publicUpdates($report),
             'message_thread' => $this->messageThread($report),
         ])->withHeaders($this->privateTrackingHeaders());
     }
@@ -65,7 +66,7 @@ class TrackingController extends Controller
             'expires_at' => $report->expires_at,
             'has_photo' => (bool) $report->photo_path,
             'timeline' => $this->timeline($report),
-            'public_updates' => [],
+            'public_updates' => $this->publicUpdates($report),
             'message_thread' => $this->messageThread($report),
         ])->withHeaders($this->privateTrackingHeaders());
     }
@@ -136,6 +137,19 @@ class TrackingController extends Controller
             'body' => $message->body,
             'created_at' => $message->created_at?->toISOString(),
         ])->all();
+    }
+
+    private function publicUpdates(IncidentReport $report): array
+    {
+        return $report->messages()
+            ->where('sender_type', 'staff')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (ReportMessage $message) => [
+                'id' => $message->id,
+                'body' => $message->body,
+                'created_at' => $message->created_at?->toISOString(),
+            ])->all();
     }
 
     private function invalidStatusResponse(): JsonResponse

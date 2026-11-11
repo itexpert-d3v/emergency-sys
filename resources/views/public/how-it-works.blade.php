@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>How it works · Kalibo MDRRMO</title>@vite('resources/css/app.css')</head>
+<head><meta charset="UTF-8">@include('partials.theme-init')<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>How it works · Kalibo MDRRMO</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
 <body class="public-surface min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
 <div class="app-photo-canvas min-h-screen">@include('public.navigation')
     <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -10,7 +10,6 @@
             <li class="grid gap-3 py-6 sm:grid-cols-[5rem_1fr]"><span class="text-2xl font-black text-blue-800 dark:text-blue-300">02</span><div><h2 class="text-xl font-black text-slate-950 dark:text-white">Keep your private tracking link</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-700 dark:text-slate-200">After submission, use the private link provided to return to your report. Do not share it publicly.</p></div></li>
             <li class="grid gap-3 py-6 sm:grid-cols-[5rem_1fr]"><span class="text-2xl font-black text-blue-800 dark:text-blue-300">03</span><div><h2 class="text-xl font-black text-slate-950 dark:text-white">Check updates</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-700 dark:text-slate-200">Review the status history and any messages recorded by staff through your tracking page.</p><a href="{{ route('track') }}" class="mt-3 inline-block text-sm font-bold text-blue-800 underline underline-offset-4 dark:text-blue-300">Track a report</a></div></li>
         </ol>
-        <div class="mt-4 border-y border-amber-400 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-950 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-100"><strong class="font-black">Emergency notice:</strong> This portal records reports and status updates; it does not dispatch responders. If someone is in immediate danger, contact the appropriate local hotline now.</div>
         <img src="{{ asset('assets/municipal-hall.jpg') }}" alt="Municipal hall of Kalibo, Aklan" loading="lazy" class="mt-8 aspect-[16/7] w-full border border-slate-300 object-cover dark:border-slate-700">
     </main>
     @include('public.footer')

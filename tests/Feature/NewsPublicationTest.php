@@ -91,12 +91,13 @@ class NewsPublicationTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('MDRRMO admin sign in')
-            ->assertSee('Kalibo MDRRMO response team')
+            ->assertSee('Recent news & updates', false)
+            ->assertDontSee('Kalibo MDRRMO response team')
             ->assertDontSee('Emergency Preparedness and Safety')
             ->assertDontSee('Useful support, from first report to latest update');
     }
 
-    public function test_footer_shows_recent_public_news_but_never_drafts(): void
+    public function test_landing_page_shows_recent_public_news_but_never_drafts(): void
     {
         $author = User::factory()->create(['role' => 'admin']);
         $this->postRecord($author, [

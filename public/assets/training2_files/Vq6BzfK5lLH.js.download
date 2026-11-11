@@ -1,0 +1,6 @@
+;/*FB_PKG_DELIM*/
+
+__d("ProdashCometV2InsightsAudienceIGWidgetsQuery_facebookRelayOperation",[],(function(t,n,r,o,a,i){a.exports="29367755212818402"}),null);
+__d("ProdashCometV2InsightsAudienceQuery_facebookRelayOperation",[],(function(t,n,r,o,a,i){a.exports="29635215129395284"}),null);
+__d("ProdashWebFollowsParityGK.relayprovider",["gkx"],(function(t,n,r,o,a,i,l){"use strict";var e={get:function(){return r("gkx")("18110")?!0:r("gkx")("20408")}};l.default=e}),98);
+__d("ProdashWebHomeKpiTotalFollowersGK.relayprovider",["gkx"],(function(t,n,r,o,a,i,l){"use strict";var e={get:function(){return r("gkx")("11959")}};l.default=e}),98);

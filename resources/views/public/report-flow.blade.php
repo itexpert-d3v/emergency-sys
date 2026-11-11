@@ -9,5 +9,5 @@
         <li><span>02</span><div><h3>Keep your tracking link</h3><p>Use the private link after submission to return to this report. Do not share it publicly.</p></div></li>
         <li><span>03</span><div><h3>Read recorded updates</h3><p>Check status history and message staff through the tracking page.</p></div></li>
     </ol>
-    <p class="report-flow-disclaimer">This system records reports and status updates; it does not dispatch responders. For immediate danger, call an emergency hotline directly.</p>
+    <p class="report-flow-disclaimer">A submitted report is not a dispatch confirmation. For immediate danger, call an emergency hotline directly.</p>
 </section>

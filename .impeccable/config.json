@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "resources/css/app.css"
+        ],
+        "createdAt": "2026-11-10T05:03:34.388Z",
+        "reason": "sanctioned by DESIGN.md: urgent hotline and critical operations state accents"
+      }
+    ]
+  }
+}

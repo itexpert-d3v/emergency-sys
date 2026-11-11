@@ -14,7 +14,7 @@ web
 
 ## Product Purpose
 
-An account-free emergency reporting and tracking service for the MDRRMO. It collects useful report details, communicates status, and helps residents stay informed. It is not an emergency dispatch service; anyone in immediate danger must call the local emergency hotline.
+An account-free emergency reporting, response-coordination, and tracking service for the MDRRMO. It collects useful report details, communicates verified response updates, and helps residents stay informed. Anyone in immediate danger must still call the local emergency hotline.
 
 ## Positioning
 
@@ -27,7 +27,7 @@ Residents may use the service on low-end phones and unreliable mobile connection
 ## Capabilities and Constraints
 
 - Preserve existing report, tracking, messaging, geolocation, photo, staff triage, and administration behavior.
-- Preserve the urgent-hotline warning and clearly state that a submitted report does not mean responders were dispatched.
+- Preserve the urgent-hotline warning and clearly state that a submitted report does not mean responders were dispatched; only a verified administrator dispatch update may make that claim.
 - Preserve current language support and MDRRMO identity assets; the visual treatment may be refreshed.
 - Keep public screens responsive, low-bandwidth-conscious, and usable on low-end phones.
 - Never expose private contact details, internal notes, or restricted evidence on public tracking screens.
@@ -40,7 +40,7 @@ The product is the MDRRMO Emergency Response Portal. Keep the existing Kalibo/MD
 
 - Product requirements and operational constraints: `prd.md`.
 - Existing logo and local-government imagery are in `public/assets/`.
-- Do not invent dispatch claims, response guarantees, or operational metrics.
+- Do not invent dispatch claims, response guarantees, or operational metrics; administrators may record verified ambulance or response-group dispatch notices.
 
 ## Product Principles
 

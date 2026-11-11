@@ -1,0 +1,6 @@
+;/*FB_PKG_DELIM*/
+
+__d("FbSharingEventFalcoEvent",["FalcoLoggerInternal","getFalcoLogPolicy_DO_NOT_USE"],(function(t,n,r,o,a,i,l){"use strict";var e=r("getFalcoLogPolicy_DO_NOT_USE")("4274"),s=o("FalcoLoggerInternal").create("fb_sharing_event",e),u=s;l.default=u}),98);
+__d("FbSharingSendFalcoEvent",["FalcoLoggerInternal","getFalcoLogPolicy_DO_NOT_USE"],(function(t,n,r,o,a,i,l){"use strict";var e=r("getFalcoLogPolicy_DO_NOT_USE")("4275"),s=o("FalcoLoggerInternal").create("fb_sharing_send",e),u=s;l.default=u}),98);
+__d("requestIdleCallbackComet",["IdleCallbackImplementation"],(function(t,n,r,o,a,i,l){"use strict";var e=t.requestIdleCallback||o("IdleCallbackImplementation").requestIdleCallback;function s(n,r){return e.call(t,n,r)}l.default=s}),98);
+__d("requestIdleCallbackWWW",["cr:694370"],(function(t,n,r,o,a,i,l){l.default=n("cr:694370")}),98);

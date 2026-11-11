@@ -2,9 +2,10 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
+    @include('partials.theme-init')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ __('Emergency Response Portal') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/landing-motion.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/landing-motion.js'])
     
 </head>
 <body class="public-surface min-h-screen bg-slate-50 text-slate-800 antialiased transition-colors duration-200 dark:bg-[#18181b] dark:text-slate-100" style="background-image: url('{{ asset('assets/lgu kalibo.jpg') }}'); background-size: cover; background-position: center; background-attachment: fixed;">
@@ -12,7 +13,6 @@
         @include('public.navigation')
 
         <main class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-            @include('public.hotline-notice')
             <section id="home" class="landing-hero scroll-mt-28" aria-labelledby="hero-heading">
                 <div class="landing-hero-copy mx-auto max-w-4xl" data-hero-copy>
                     <h1 id="hero-heading" class="text-4xl font-black leading-tight text-white sm:text-5xl lg:text-7xl">{{ __('Report incidents quickly and stay informed.') }}</h1>
@@ -27,7 +27,7 @@
                 </div>
             </section>
 
-            @include('public.photo-gallery', ['photos' => $photos])
+            @include('public.recent-news', ['news' => $footerNews])
         </main>
         @include('public.footer')
     </div>

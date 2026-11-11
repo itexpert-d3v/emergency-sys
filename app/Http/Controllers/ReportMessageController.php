@@ -82,6 +82,9 @@ class ReportMessageController extends Controller
 
     public function staffStore(Request $request, IncidentReport $report): JsonResponse
     {
+        // A checkbox sends "on" or nothing; normalize to a real boolean first.
+        $request->merge(['close_thread' => $request->boolean('close_thread')]);
+
         $data = $request->validate([
             'body' => ['required', 'string', 'max:500'],
             'close_thread' => ['sometimes', 'boolean'],
@@ -91,14 +94,16 @@ class ReportMessageController extends Controller
             return response()->json(['error' => 'This thread is closed.'], 403);
         }
 
+        $closeThread = (bool) ($data['close_thread'] ?? false);
+
         $message = $report->messages()->create([
             'sender_type' => 'staff',
             'body' => strip_tags($data['body']),
             'staff_actor_id' => $request->user()?->id,
-            'closed_thread' => (bool) ($data['close_thread'] ?? false),
+            'closed_thread' => $closeThread,
         ]);
 
-        if (! empty($data['close_thread'])) {
+        if ($closeThread) {
             $report->thread_closed = true;
             $report->save();
         }

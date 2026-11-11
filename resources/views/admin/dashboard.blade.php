@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operations dashboard · Kalibo MDRRMO</title>
-    @vite('resources/css/app.css')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="operations-surface min-h-screen text-slate-800 antialiased dark:text-slate-100">
+<body class="operations-surface admin-photo-surface min-h-screen text-slate-800 antialiased dark:text-slate-100">
     <div class="operations-shell">
         @include('admin.sidebar')
         <main class="operations-main">
             <header class="operations-page-head">
-                <div><p class="operations-eyebrow">Operations overview</p><h1>Dashboard</h1><p>Incident activity and response status at a glance.</p></div>
+                <div><p class="operations-eyebrow">Admin panel · Operations overview</p><h1>Dashboard</h1><p>Incident activity and response status at a glance.</p></div>
                 <div class="operations-head-actions">@include('components.theme-toggle', ['placement' => 'inline', 'iconOnly' => true])<a href="{{ route('admin.news.index') }}" class="operations-head-link">News &amp; advisories</a></div>
             </header>
 

@@ -46,9 +46,9 @@
     --color-amber-200: #f9df97;
     --color-amber-300: #f1c65f;
     --color-amber-400: #e5aa35;
-    --color-amber-500: #d97706;
-    --color-amber-600: #b45309;
-    --color-amber-700: #85470d;
+    --color-amber-500: #d4af37;
+    --color-amber-600: #b18a1f;
+    --color-amber-700: #806519;
     --color-amber-800: #6b3910;
     --color-amber-900: #572f12;
     --color-amber-950: #321806;
@@ -76,7 +76,7 @@
         --civic-royal: #1e40af;
         --civic-royal-strong: #1e3a8a;
         --civic-support: #eff6ff;
-        --civic-gold: #d97706;
+        --civic-gold: #d4af37;
         --civic-error: #bd3b36;
         --civic-focus: #1e40af;
         --civic-glass: rgba(255, 255, 255, 0.82);
@@ -246,10 +246,12 @@
     height: 40px;
     cursor: pointer;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.48);
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
     color: #ffffff;
     list-style: none;
-    transition: background-color 140ms ease, border-color 140ms ease;
+    transition: background-color 140ms ease, color 140ms ease;
 }
 
 .locale-trigger::-webkit-details-marker {
@@ -258,8 +260,13 @@
 
 .locale-trigger:hover,
 .public-locale-menu[open] .locale-trigger {
-    border-color: #f2cf66;
     background: rgba(255, 255, 255, 0.14);
+    color: #f2cf66;
+}
+
+.locale-trigger:focus-visible {
+    outline: 2px solid #f2cf66;
+    outline-offset: 3px;
 }
 
 .locale-trigger svg {
@@ -1275,14 +1282,14 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
 
 .public-surface .landing-nav .landing-nav-report,
 .public-surface .landing-hero-primary {
-    border-color: #9a4d05;
-    background: #d97706;
+    border-color: #b18a1f;
+    background: #d4af37;
     color: #18181b;
 }
 
 .public-surface .landing-nav .landing-nav-report:hover,
 .public-surface .landing-hero-primary:hover {
-    background: #f0a12a;
+    background: #e4c65a;
     color: #18181b;
 }
 
@@ -1303,6 +1310,17 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
 
 .dark .public-surface .app-photo-canvas {
     background-image: linear-gradient(132deg, rgba(24, 24, 27, 0.94), rgba(39, 39, 42, 0.91) 58%, rgba(24, 24, 27, 0.95)) !important;
+}
+
+.public-ambulance-surface .app-photo-canvas {
+    background-image: linear-gradient(132deg, rgba(255, 255, 255, 0.93), rgba(239, 246, 255, 0.86) 54%, rgba(255, 248, 235, 0.88)), url('/assets/ambulance.jpg') !important;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.dark .public-ambulance-surface .app-photo-canvas {
+    background-image: linear-gradient(132deg, rgba(24, 24, 27, 0.91), rgba(39, 39, 42, 0.84) 58%, rgba(24, 24, 27, 0.92)), url('/assets/ambulance.jpg') !important;
 }
 
 .dark .public-surface .system-footer {
@@ -1339,7 +1357,7 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
 }
 
 .public-surface .brand-mark-sou {
-    border-color: #d97706;
+    border-color: #d4af37;
 }
 
 .brand-marks {
@@ -1354,24 +1372,20 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
     display: block;
     flex: 0 0 auto;
     object-fit: contain;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .brand-mark-sou {
     width: 42px;
     height: 42px;
-    padding: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.84);
-    border-radius: 10px;
-    background: #ffffff;
 }
 
 .brand-mark-kalibo {
     width: 42px;
     height: 42px;
-    padding: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.84);
-    border-radius: 10px;
-    background: #ffffff;
 }
 
 .brand-marks-login .brand-mark-sou {
@@ -1382,6 +1396,49 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
 .brand-marks-login .brand-mark-kalibo {
     width: 52px;
     height: 52px;
+}
+
+.minimal-icon-control {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 50%;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #155f73;
+    transition: color 160ms ease, background-color 160ms ease;
+}
+
+.minimal-icon-control:hover {
+    background: rgba(21, 95, 115, 0.1) !important;
+    color: #10384e;
+}
+
+.minimal-icon-control:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+}
+
+.civic-masthead .minimal-icon-control {
+    color: #ffffff;
+}
+
+.civic-masthead .minimal-icon-control:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffd074;
+}
+
+.dark .minimal-icon-control {
+    color: #d7f4f5;
+}
+
+.dark .minimal-icon-control:hover {
+    background: rgba(215, 244, 245, 0.12) !important;
+    color: #ffffff;
 }
 
 .operations-surface {
@@ -1395,6 +1452,36 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
     background-color: var(--ops-canvas) !important;
     background-image: none !important;
     color: var(--ops-ink);
+}
+
+.admin-photo-surface .app-photo-canvas {
+    background-image: linear-gradient(132deg, rgba(255, 255, 255, 0.91), rgba(244, 244, 245, 0.84) 55%, rgba(255, 248, 235, 0.88)), url('/assets/bgkgroup.jpg') !important;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.admin-photo-surface .operations-shell {
+    background-image: linear-gradient(132deg, rgba(244, 244, 245, 0.94), rgba(244, 244, 245, 0.84)), url('/assets/bgkgroup.jpg') !important;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.admin-photo-surface .operations-main {
+    background: linear-gradient(145deg, rgba(250, 250, 250, 0.92), rgba(241, 241, 243, 0.84) 60%, rgba(232, 232, 235, 0.88)) !important;
+}
+
+.dark .admin-photo-surface .app-photo-canvas {
+    background-image: linear-gradient(132deg, rgba(24, 24, 27, 0.91), rgba(39, 39, 42, 0.84) 58%, rgba(24, 24, 27, 0.92)), url('/assets/bgkgroup.jpg') !important;
+}
+
+.dark .admin-photo-surface .operations-shell {
+    background-image: linear-gradient(132deg, rgba(24, 24, 27, 0.94), rgba(24, 24, 27, 0.84)), url('/assets/bgkgroup.jpg') !important;
+}
+
+.dark .admin-photo-surface .operations-main {
+    background: linear-gradient(145deg, rgba(24, 24, 27, 0.92), rgba(32, 32, 36, 0.84) 60%, rgba(24, 24, 27, 0.9)) !important;
 }
 
 .dark .operations-surface {
@@ -2398,3 +2485,8 @@ button[class*='bg-amber-500']:hover:not(:disabled) {
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+.field-invalid {
+     border-color: #dc2626 !important;
+     box-shadow: 0 0 0 3px rgb(220 38 38 / 0.18) !important;
+   }

@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ __('Staff login') }}</title>
-    @vite('resources/css/app.css')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="operations-surface min-h-screen bg-slate-50 text-slate-800 antialiased transition-colors duration-200 dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
     <div class="app-photo-canvas flex min-h-screen items-center justify-center px-4 py-10">
         <main class="civic-panel w-full max-w-md rounded-[6px] p-7 sm:p-9 dark:border-slate-700 dark:bg-slate-900">
             <a href="{{ route('landing') }}" class="text-xs font-black uppercase tracking-[0.18em] text-blue-800 dark:text-blue-300">Kalibo MDRRMO · SOU · {{ __('Staff portal') }}</a>
             <div class="mb-3 flex justify-end">@include('components.theme-toggle', ['placement' => 'inline'])</div>
-            <div class="mb-5 flex justify-center"><span class="brand-marks brand-marks-login"><img class="brand-mark-sou" src="{{ asset('assets/sou.png') }}" alt="Special Operations Unit emblem" width="64" height="64"><img class="brand-mark-kalibo" src="{{ asset('assets/kalibo-logo.png') }}" alt="Municipality of Kalibo seal" width="44" height="44"></span></div>
+            <div class="mb-5 flex justify-center"><span class="brand-marks brand-marks-login"><img class="brand-mark-sou" src="{{ asset('assets/sou.png') }}" alt="Special Operations Unit emblem" width="52" height="52"><img class="brand-mark-kalibo" src="{{ asset('assets/kalibo-logo.png') }}" alt="Municipality of Kalibo seal" width="52" height="52"></span></div>
             <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-900 dark:text-white">{{ __('Staff sign in') }}</h1>
             <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ __('Sign in to review and update emergency reports.') }}</p>
             @if ($errors->any())

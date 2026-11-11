@@ -13,5 +13,9 @@ class DatabaseSeeder extends Seeder
             IncidentCategorySeeder::class,
             RoleUserSeeder::class,
         ]);
+
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(ReportTrackingSeeder::class);
+        }
     }
 }

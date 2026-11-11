@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{ $post->excerpt }}">
     <title>{{ $post->title }} · MDRRMO News</title>
-    @vite('resources/css/app.css')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="public-surface min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
     <div class="app-photo-canvas min-h-screen">
@@ -37,7 +37,7 @@
                     </section>
                 @endif
                 <section class="mt-8 border-t border-slate-300 pt-5 dark:border-slate-700" aria-label="Share this notice"><h2 class="text-sm font-black text-slate-900 dark:text-white">Share this notice</h2><div class="mt-3 flex flex-wrap gap-4 text-sm font-bold"><a target="_blank" rel="noopener noreferrer" href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(route('news.show', $post->slug)) }}" class="text-blue-800 underline underline-offset-4 dark:text-blue-300">Facebook</a><a target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?url={{ urlencode(route('news.show', $post->slug)) }}&amp;text={{ urlencode($post->title) }}" class="text-blue-800 underline underline-offset-4 dark:text-blue-300">X</a><button type="button" data-copy-share class="text-blue-800 underline underline-offset-4 dark:text-blue-300">Copy link</button><span data-share-status class="sr-only" role="status" aria-live="polite"></span></div></section>
-            </div><aside class="lg:sticky lg:top-5 lg:self-start">@include('public.hotline-notice')<div class="border-t border-slate-300 pt-4 dark:border-slate-700"><h2 class="text-sm font-black text-slate-900 dark:text-white">Emergency contacts</h2><p class="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">For immediate danger, call your local emergency hotline. This site does not dispatch responders.</p><a href="{{ route('news.index') }}" class="mt-4 inline-block text-sm font-bold text-blue-800 underline underline-offset-4 dark:text-blue-300">More public updates</a></div></aside></article>
+            </div><aside class="lg:sticky lg:top-5 lg:self-start"><div class="border-t border-slate-300 pt-4 dark:border-slate-700"><h2 class="text-sm font-black text-slate-900 dark:text-white">Emergency contacts</h2><p class="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">For immediate danger, call your local emergency hotline. This site does not dispatch responders.</p><a href="{{ route('news.index') }}" class="mt-4 inline-block text-sm font-bold text-blue-800 underline underline-offset-4 dark:text-blue-300">More public updates</a></div></aside></article>
         </main>
         @include('public.footer')
     </div>

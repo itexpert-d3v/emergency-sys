@@ -1,0 +1,4 @@
+;/*FB_PKG_DELIM*/
+
+__d("getRTCCallStateOfLSRTCCallState",["FBLogger","LSRtcCallState"],(function(t,n,r,o,a,i,l){"use strict";function e(e){return e===2?!0:e===8}function s(t,n){switch(t){case r("LSRtcCallState").AUDIO_1TO1_CALL:return"AUDIO_1TO1_CALL";case r("LSRtcCallState").VIDEO_1TO1_CALL:return"VIDEO_1TO1_CALL";case r("LSRtcCallState").NO_ONGOING_CALL:return"NO_ONGOING_CALL";case r("LSRtcCallState").AUDIO_GROUP_CALL:return e(n)?"AUDIO_GROUP_CALL":"AUDIO_1TO1_CALL";case r("LSRtcCallState").VIDEO_GROUP_CALL:return e(n)?"VIDEO_GROUP_CALL":"VIDEO_1TO1_CALL";default:return r("FBLogger")("messenger_web_calling").mustfix("Unknown RTCCallState: %sL and threadType %sL",t,n),"NO_ONGOING_CALL"}}l.default=s}),98);
+__d("useMWCallingSafetyNotice",["cr:19094"],(function(t,n,r,o,a,i,l){"use strict";var e;function s(e){var t=e.startCall;t()}function u(){return s}var c=(e=n("cr:19094"))!=null?e:u,d=c;l.default=d}),98);

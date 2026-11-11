@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\IncidentReport;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
@@ -78,5 +80,50 @@ class AdminDashboardController extends Controller
             'reports' => $reports,
             'status' => $request->status,
         ]);
+    }
+
+    public function dispatchResponder(Request $request, IncidentReport $report): RedirectResponse
+    {
+        $data = $request->validate([
+            'responder' => ['required', 'string', 'in:ambulance,response_group'],
+            'dispatch_confirmed' => ['accepted'],
+        ]);
+
+        if (in_array($report->status, ['resolved', 'closed'], true)) {
+            return redirect()->route('admin.dashboard.queue')
+                ->withErrors(['responder' => 'A responder cannot be marked en route for a resolved or closed report.']);
+        }
+
+        $notice = $data['responder'] === 'ambulance'
+            ? 'MDRRMO update: An ambulance is on the way.'
+            : 'MDRRMO update: A response group is on the way.';
+
+        DB::transaction(function () use ($report, $notice, $request): void {
+            if ($report->status !== 'in_progress') {
+                $report->status = 'in_progress';
+                $report->save();
+                $report->statusEvents()->create([
+                    'status' => 'in_progress',
+                    'actor_user_id' => $request->user()?->id,
+                ]);
+            }
+
+            $alreadyNotified = $report->messages()
+                ->where('sender_type', 'staff')
+                ->where('body', $notice)
+                ->exists();
+
+            if (! $alreadyNotified) {
+                $report->messages()->create([
+                    'sender_type' => 'staff',
+                    'body' => $notice,
+                    'staff_actor_id' => $request->user()?->id,
+                    'closed_thread' => false,
+                ]);
+            }
+        });
+
+        return redirect()->route('admin.dashboard.queue')
+            ->with('status', 'Dispatch confirmation recorded and shared with the reporter.');
     }
 }

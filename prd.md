@@ -12,7 +12,7 @@ A mobile-friendly, account-free web app where residents report emergencies to th
 
 Residents report accidents and emergencies to the MDRRMO without an account, through a guided chat that collects structured fields. They get a reference code and a private tracking link that works for seven days. Staff triage reports in a protected dashboard and are notified the moment a report arrives.
 
-This is an intake and tracking tool. It is not a replacement for the emergency hotline, and a submitted report is never proof that responders were dispatched. Every public screen must tell people in immediate danger to call the local emergency hotline first.
+This system supports MDRRMO intake, response coordination, and private tracking. It is not a replacement for the emergency hotline, and a submitted report is never proof that responders were dispatched. Only an authorized administrator's recorded dispatch confirmation may tell a reporter that an ambulance or response group is on the way. Every public screen must tell people in immediate danger to call the local emergency hotline first.
 
 ---
 
@@ -58,7 +58,7 @@ Three roles exist. Public reporters stay unauthenticated; staff and administrato
 |---|---|
 | Public reporter | Submit reports, receive a reference code, view progress and exchange messages on their own report via the private tracking link |
 | MDRRMO staff | Review reports, set status and priority, post public updates, add internal notes, record response actions, reply to reporters |
-| MDRRMO administrator | Everything staff can do, plus staff accounts and permissions, categories, settings, notification channels, and audit and log review |
+| MDRRMO administrator | Everything staff can do, plus staff accounts and permissions, categories, settings, notification channels, audit and log review, and confirmed ambulance/response-group dispatch notices |
 
 ### Main flow
 
@@ -273,6 +273,36 @@ Prank and junk reports waste responder time, but friction must not stop a genuin
 - **Duplicate detection:** flag new reports with the same category within a configurable radius and time window (for example 200 m and 30 minutes) so staff can link or merge them. Detection suggests; staff decide.
 - **Junk handling:** staff can mark a report Invalid or Unable to verify with a reason, bulk-select likely junk, and flag an IP or device token for review. Repeat offenders are throttled, never silently blackholed without a log entry.
 - **No hard blocks on first contact.** A suspected abusive source is rate limited and logged, and the report still reaches staff with a suspicion flag.
+
+## Authorization and rate-limiting specification
+
+### Authorization matrix
+
+| Surface or action | Required authorization |
+|---|---|
+| Landing, report form, news, tracking pages | Public; no account required |
+| Create a report or read categories | Public request, validated input, bot check where configured, and public rate limit |
+| Read a report or send a reporter message | A valid, unexpired, non-revoked tracking token; the reference code alone is insufficient |
+| Staff dashboard, report triage, staff messages, report photos | Authenticated `staff` or `admin` user |
+| Admin report dashboard and incident queue | Authenticated `admin` user |
+| News create, edit, publish, and archive | Authenticated `admin`, `mdrrmo_officer`, or `information_officer` user |
+| Staff/admin logout | Authenticated session for the matching guard |
+
+Authorization is enforced server-side with route middleware and token checks. UI visibility is not an authorization boundary. Public responses must never include reporter contact details, internal notes, restricted evidence, or another report's messages.
+
+### Named rate limits
+
+| Limiter | Applies to | Limit and key |
+|---|---|---|
+| `public-report` | Public report form and API submission | 3 requests/minute per client IP |
+| `public-tracking` | Tracking pages, status, categories, and token reads | 10 requests/minute per client IP |
+| `public-message` | Reporter messages through a tracking token | 10 requests/minute per client IP |
+| `auth` | Staff and admin login POSTs | 5 requests/minute per IP and per normalized email hash |
+| `staff-read` | Authenticated staff/admin dashboard reads | 60 requests/minute per user, falling back to IP |
+| `staff-write` | Triage and staff replies | 30 requests/minute per user, falling back to IP |
+| `admin-write` | News changes and confirmed responder-dispatch notices | 30 requests/minute per authorized user, falling back to IP |
+
+Rate limits return the framework's standard `429 Too Many Requests` response. Failed and unauthorized requests are still subject to the relevant limiter, and rate-limit keys must not contain raw tracking tokens or passwords.
 
 ### Duplicate detection (MySQL 8)
 

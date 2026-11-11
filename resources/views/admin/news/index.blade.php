@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>News dispatcher · Admin</title>@vite('resources/css/app.css')</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>News dispatcher · Admin</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
 <body class="operations-surface min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
 <div class="operations-shell">@include('admin.sidebar')<main class="operations-main">
     <header class="operations-page-head"><div><p class="operations-eyebrow">Public information</p><h1>News &amp; advisories</h1><p>Draft, schedule, publish, and archive official updates.</p></div><div class="operations-head-actions">@include('components.theme-toggle', ['placement' => 'inline', 'iconOnly' => true])<a href="{{ route('news.index') }}" class="operations-head-link">Public portal</a></div></header>

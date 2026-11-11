@@ -14,7 +14,7 @@ class PublicSafetyCopyTest extends TestCase
         $this->get('/report')
             ->assertOk()
             ->assertSee('<html lang="hil">', false)
-            ->assertSee('May emerhensya bala nga nagapameligro sang kabuhi?');
+            ->assertSee('Ireport ang insidente');
     }
 
     public function test_public_language_switcher_offers_the_four_required_languages(): void
@@ -34,7 +34,6 @@ class PublicSafetyCopyTest extends TestCase
 
         $this->get('/report')
             ->assertOk()
-            ->assertSee('Tumawag ngayon sa lokal na hotline para sa emerhensiya.')
             ->assertSee('Mag-ulat ng insidente');
     }
 
@@ -44,13 +43,13 @@ class PublicSafetyCopyTest extends TestCase
             ->assertSessionHasErrors('locale');
     }
 
-    public function test_public_pages_direct_life_threatening_emergencies_to_a_hotline_without_promising_dispatch(): void
+    public function test_public_pages_do_not_render_the_repeated_hotline_notice(): void
     {
         foreach (['/', '/report'] as $path) {
             $response = $this->get($path)->assertOk();
 
-            $response->assertSee('Call your local emergency hotline now.')
-                ->assertSee('does not dispatch responders.');
+            $response->assertDontSee('Call your local emergency hotline now.')
+                ->assertDontSee('Life-threatening emergency?');
         }
 
         $trackingViews = [
@@ -64,8 +63,8 @@ class PublicSafetyCopyTest extends TestCase
 
         foreach ($trackingViews as $view => $data) {
             $html = view($view, $data)->render();
-            $this->assertStringContainsString('Call your local emergency hotline now.', $html);
-            $this->assertStringContainsString('does not dispatch responders.', $html);
+            $this->assertStringNotContainsString('Call your local emergency hotline now.', $html);
+            $this->assertStringNotContainsString('Life-threatening emergency?', $html);
             $this->assertStringNotContainsString('<script', $html);
         }
     }

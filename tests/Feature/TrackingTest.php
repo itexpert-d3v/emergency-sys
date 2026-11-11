@@ -39,6 +39,11 @@ class TrackingTest extends TestCase
             ->assertSee($report->reference_code)
             ->assertSee('Submitted')
             ->assertDontSee($report->contact_number);
+
+        $this->getJson('/api/reports/' . $report->reference_code . '/status?token=' . $token)
+            ->assertOk()
+            ->assertJsonPath('reference_code', $report->reference_code)
+            ->assertJsonPath('status', 'submitted');
     }
 
     public function test_expired_token_is_indistinguishable_from_an_invalid_tracking_link(): void

@@ -17,6 +17,7 @@ class PublicReportingTest extends TestCase
             ->assertOk()
             ->assertSee('Report an incident')
             ->assertSee('Submit a report')
+            ->assertSee('required details complete')
             ->assertDontSee('Online report submission is not available yet.');
     }
 
@@ -84,6 +85,33 @@ class PublicReportingTest extends TestCase
             ->assertJsonPath('reference_code', $first->json('reference_code'));
 
         $this->assertDatabaseCount('incident_reports', 1);
+    }
+
+    public function test_a_new_report_returns_a_private_tracking_link_that_loads(): void
+    {
+        $category = IncidentCategory::query()->create([
+            'slug' => 'road-incident',
+            'name_translations' => ['en' => 'Road incident'],
+            'active' => true,
+            'sort_order' => 20,
+        ]);
+
+        $response = $this->postJson('/api/reports', [
+            'category_id' => $category->id,
+            'description' => 'A vehicle is blocking one lane near the public market.',
+            'location_text' => 'Barangay Poblacion, near the public market',
+            'reporter_name' => 'Maria Dela Cruz',
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => 'a0e25da0-507b-44b3-85d8-2a5f16cbbfd9',
+        ])->assertOk();
+
+        $this->get($response->json('tracking_url'))
+            ->assertOk()
+            ->assertSee($response->json('reference_code'))
+            ->assertSee('Submitted')
+            ->assertDontSee('+639171234567');
     }
 
     public function test_it_rejects_an_invalid_turnstile_token_when_configured(): void
