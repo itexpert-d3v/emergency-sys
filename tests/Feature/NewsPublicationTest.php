@@ -50,15 +50,53 @@ class NewsPublicationTest extends TestCase
         $this->assertTrue($published->fresh()->is_banner);
     }
 
-    public function test_only_authorized_publishing_roles_can_open_the_cms(): void
+    public function test_staff_and_publishing_roles_can_open_the_cms(): void
     {
-        $this->get('/admin/news')->assertRedirect('/admin/login');
+        $this->get('/admin/news')->assertRedirect('/login');
 
         $staff = User::factory()->create(['role' => 'staff']);
-        $this->actingAs($staff)->get('/admin/news')->assertForbidden();
+        $this->actingAs($staff)->get('/admin/news')->assertOk();
 
         $officer = User::factory()->create(['role' => 'information_officer']);
         $this->actingAs($officer)->get('/admin/news')->assertOk();
+    }
+
+    public function test_news_summary_cards_filter_archived_and_scheduled_together(): void
+    {
+        $author = User::factory()->create(['role' => 'admin']);
+        $this->postRecord($author, ['title' => 'Draft card notice', 'slug' => 'draft-card-notice']);
+        $this->postRecord($author, [
+            'title' => 'Published card notice',
+            'slug' => 'published-card-notice',
+            'status' => 'published',
+            'published_at' => now()->subMinute(),
+        ]);
+        $this->postRecord($author, [
+            'title' => 'Scheduled card notice',
+            'slug' => 'scheduled-card-notice',
+            'status' => 'scheduled',
+            'published_at' => now()->addDay(),
+        ]);
+        $this->postRecord($author, [
+            'title' => 'Archived card notice',
+            'slug' => 'archived-card-notice',
+            'status' => 'archived',
+        ]);
+
+        $this->actingAs($author)
+            ->get('/admin/news')
+            ->assertOk()
+            ->assertSee('All advisories')
+            ->assertSee('Drafts')
+            ->assertSee('Published')
+            ->assertSee('Archived / scheduled')
+            ->assertSee('status=archived_scheduled', false);
+
+        $this->get('/admin/news?status=archived_scheduled')
+            ->assertOk()
+            ->assertSee('Scheduled card notice')
+            ->assertSee('Archived card notice')
+            ->assertDontSee('Published card notice');
     }
 
     public function test_information_officer_can_sign_in_to_the_publishing_panel(): void
@@ -69,7 +107,7 @@ class NewsPublicationTest extends TestCase
             'role' => 'information_officer',
         ]);
 
-        $this->post('/admin/login', [
+        $this->post(route('login'), [
             'email' => $officer->email,
             'password' => 'secret123',
         ])->assertRedirect('/admin/news');
@@ -80,17 +118,17 @@ class NewsPublicationTest extends TestCase
         $this->get('/about')
             ->assertOk()
             ->assertSee('About Kalibo MDRRMO')
-            ->assertSee('MDRRMO admin sign in')
+            ->assertSee('MDRRMO operations sign in')
             ->assertSee('assets/mddrmobg.jpg');
 
         $this->get('/how-it-works')
             ->assertOk()
             ->assertSee('How it works')
-            ->assertSee('MDRRMO admin sign in');
+            ->assertSee('MDRRMO operations sign in');
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('MDRRMO admin sign in')
+            ->assertSee('MDRRMO operations sign in')
             ->assertSee('Recent news & updates', false)
             ->assertDontSee('Kalibo MDRRMO response team')
             ->assertDontSee('Emergency Preparedness and Safety')
@@ -125,10 +163,10 @@ class NewsPublicationTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)
-            ->get('/admin/dashboard')
+            ->get('/dashboard')
             ->assertOk()
-            ->assertSee('Reports submitted · last 7 days')
-            ->assertSee('Report status breakdown')
+            ->assertSee('Volume trend')
+            ->assertSee('Status breakdown')
             ->assertSee('Dashboard')
             ->assertSee('News &amp; advisories', false);
     }

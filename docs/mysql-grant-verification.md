@@ -16,7 +16,13 @@ MySQL and MariaDB privileges are cumulative. A table-level `REVOKE` cannot
 cancel UPDATE, DELETE, or DDL inherited from a schema-wide grant. The app and
 audit accounts must have no schema-wide grants in the protected schemas;
 runtime permissions are granted table by table. Repeat the app grants for new
-runtime tables after migrations, excluding `audit_logs`.
+runtime tables after migrations, excluding `audit_logs`. The admin moderation
+page requires `SELECT, INSERT, DELETE` on `banned_ips` and `banned_phones`; the
+audit account must not receive access to either table. The app also needs
+`SELECT, INSERT, UPDATE, DELETE` on `incident_reports` for queue triage,
+soft-delete/restore, and reject/reopen actions. IP bans use Laravel's
+RateLimiter and expire after 24 hours; phone bans remain active until an admin
+unbans them.
 
 ## Step 8: verify the matrix
 
@@ -24,7 +30,8 @@ Run the checks as the indicated account against both the application and test
 schemas:
 
 - App: `SELECT` and `INSERT` succeed on the probe; `UPDATE` and `DELETE` fail
-  on the protected probe; `ALTER TABLE` fails.
+  on the protected probe; `ALTER TABLE` fails. App `SELECT`, `INSERT`, and
+  `DELETE` on `banned_ips` and `banned_phones` succeed.
 - Audit: `SELECT` and `INSERT` succeed on the protected probe; `UPDATE` and
   `DELETE` fail; access to unrelated tables fails.
 - Migration: `ALTER TABLE` succeeds on the probe.

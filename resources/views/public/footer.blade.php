@@ -30,8 +30,7 @@
                 <a href="{{ route('about') }}">About</a>
                 <a href="{{ route('how-it-works') }}">How it works</a>
                 <a href="{{ route('public.report') }}">Report an incident</a>
-                <a href="{{ route('staff.login') }}">Staff login</a>
-                <a href="{{ route('admin.login') }}">Admin login</a>
+                <a href="{{ route('login') }}">Operations sign in</a>
             </nav>
         </div>
     </div>

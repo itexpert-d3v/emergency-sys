@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 class NewsPost extends Model
 {
@@ -33,6 +34,17 @@ class NewsPost extends Model
             'published_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        $forgetLandingCaches = function (): void {
+            Cache::forget('landing.footer_news');
+            Cache::forget('landing.recent_news');
+        };
+
+        static::saved($forgetLandingCaches);
+        static::deleted($forgetLandingCaches);
     }
 
     public function author(): BelongsTo

@@ -17,22 +17,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Fix #1: behind Nginx/Cloudflare, $request->ip() is the proxy address
-        // unless trusted proxies are configured. Every visitor would share one
-        // rate-limit bucket otherwise.
-        $middleware->trustProxies(at: [
-            '127.0.0.1',
-            '::1',
-            // Add Cloudflare ranges here if applicable, e.g.:
-            // '173.245.48.0/20', '103.21.244.0/22', ...
-            // Or, to trust the whole edge:  at: '*'
-        ]);
+        $trustedProxies = trim((string) env('TRUSTED_PROXIES', '127.0.0.1,::1'));
+        $trustedProxies = $trustedProxies === '*'
+            ? '*'
+            : array_values(array_filter(array_map('trim', explode(',', $trustedProxies))));
+        $middleware->trustProxies(at: $trustedProxies);
 
         $middleware->append(EnsureCorrelationId::class);
 
-        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('admin/*')
-            ? route('admin.login')
-            : route('staff.login'));
+        $middleware->redirectGuestsTo(fn (Request $request) => route('login'));
 
         $middleware->alias([
             'turnstile' => VerifyTurnstile::class,

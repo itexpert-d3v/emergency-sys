@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class IncidentReport extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'incident_reports';
 
     protected $keyType = 'string';
@@ -24,6 +27,9 @@ class IncidentReport extends Model
         'reporting_for_other' => 'boolean',
         'victim_contactable' => 'boolean',
         'submitted_at' => 'datetime',
+        'accepted_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'deleted_at' => 'datetime',
         'expires_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

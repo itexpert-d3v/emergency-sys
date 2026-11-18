@@ -3,8 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\IncidentCategory;
+use App\Models\BannedIp;
+use App\Models\BannedPhone;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class PublicReportingTest extends TestCase
@@ -19,6 +23,16 @@ class PublicReportingTest extends TestCase
             ->assertSee('Submit a report')
             ->assertSee('required details complete')
             ->assertDontSee('Online report submission is not available yet.');
+    }
+
+    public function test_reporter_form_places_contact_before_location_and_does_not_select_incident_type(): void
+    {
+        $response = $this->get('/report')->assertOk();
+        $html = $response->getContent();
+
+        $this->assertLessThan(strpos($html, 'id="location-heading"'), strpos($html, 'id="contact-heading"'));
+        $response->assertSee('0 of 4 required details complete')
+            ->assertDontSee('name="category_id"', false);
     }
 
     public function test_it_lists_active_categories(): void
@@ -85,6 +99,137 @@ class PublicReportingTest extends TestCase
             ->assertJsonPath('reference_code', $first->json('reference_code'));
 
         $this->assertDatabaseCount('incident_reports', 1);
+    }
+
+    public function test_public_submission_leaves_incident_type_unclassified_for_admin_triage(): void
+    {
+        $this->postJson('/api/reports', [
+            'description' => 'A person needs assistance near the public market entrance.',
+            'location_text' => 'Barangay Poblacion, public market',
+            'reporter_name' => 'Maria Dela Cruz',
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => '2c13bdf8-d7fb-4b9e-9fd1-1f54f1f832c1',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('incident_reports', [
+            'idempotency_key' => '2c13bdf8-d7fb-4b9e-9fd1-1f54f1f832c1',
+            'category_id' => null,
+            'reporter_ip' => '127.0.0.1',
+        ]);
+    }
+
+    public function test_banned_phone_numbers_cannot_submit_new_reports(): void
+    {
+        BannedPhone::query()->create(['phone_number' => '639171234567']);
+
+        $this->postJson('/api/reports', [
+            'description' => 'A resident needs assistance near the public market entrance.',
+            'location_text' => 'Public market',
+            'reporter_name' => 'Maria Dela Cruz',
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => 'fd3c43aa-8263-4fef-a71e-f3a54660c4ce',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('incident_reports', 0);
+    }
+
+    public function test_reporter_name_rejects_digits_and_unsafe_special_characters(): void
+    {
+        foreach (['Maria2 Cruz', '<script>alert(1)</script>', 'Maria@Cruz'] as $name) {
+            $this->postJson('/api/reports', [
+                'description' => 'A resident needs assistance near the public market entrance.',
+                'location_text' => 'Public market',
+                'reporter_name' => $name,
+                'contact_number' => '+639171234567',
+                'reporting_for_other' => false,
+                'language' => 'en',
+                'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
+            ])->assertUnprocessable()->assertJsonValidationErrors('reporter_name');
+        }
+    }
+
+    public function test_reporter_name_accepts_accents_apostrophes_and_hyphens(): void
+    {
+        $this->postJson('/api/reports', [
+            'description' => 'A resident needs assistance near the public market entrance.',
+            'location_text' => 'Public market',
+            'reporter_name' => "José O'Neil-Santos",
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => '131575e5-2bf3-4176-9eaa-906c5d24b28a',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('incident_reports', [
+            'idempotency_key' => '131575e5-2bf3-4176-9eaa-906c5d24b28a',
+            'reporter_name' => "José O'Neil-Santos",
+        ]);
+    }
+
+    public function test_disguised_svg_script_content_is_rejected_as_a_raster_photo(): void
+    {
+        $this->postJson('/api/reports', [
+            'description' => 'A resident needs assistance near the public market entrance.',
+            'location_text' => 'Public market',
+            'reporter_name' => 'Maria Dela Cruz',
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => 'cbab6ad1-12fa-4aeb-8891-ae8a377da570',
+            'photo' => UploadedFile::fake()->createWithContent('payload.jpg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),
+        ])->assertUnprocessable()->assertJsonValidationErrors('photo');
+
+        $this->assertDatabaseCount('incident_reports', 0);
+    }
+
+    public function test_expired_ip_ban_does_not_block_report_submission(): void
+    {
+        BannedIp::query()->create([
+            'ip_address' => '127.0.0.1',
+            'expires_at' => now()->subSecond(),
+        ]);
+        RateLimiter::hit(BannedIp::limiterKey('127.0.0.1'), 86400);
+
+        $this->postJson('/api/reports', [
+            'description' => 'A resident needs assistance near the public market entrance.',
+            'location_text' => 'Public market',
+            'reporter_name' => 'Maria Dela Cruz',
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => '7d502247-97a6-42bb-8e53-ccfb25aee30f',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('incident_reports', [
+            'idempotency_key' => '7d502247-97a6-42bb-8e53-ccfb25aee30f',
+            'reporter_ip' => '127.0.0.1',
+        ]);
+        $this->assertFalse(RateLimiter::tooManyAttempts(BannedIp::limiterKey('127.0.0.1'), 1));
+    }
+
+    public function test_report_records_forwarded_client_ip_from_a_trusted_proxy(): void
+    {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+            'HTTP_X_FORWARDED_FOR' => '198.51.100.55',
+        ])->postJson('/api/reports', [
+            'description' => 'A resident needs assistance near the public market entrance.',
+            'location_text' => 'Public market',
+            'reporter_name' => 'Maria Dela Cruz',
+            'contact_number' => '+639171234567',
+            'reporting_for_other' => false,
+            'language' => 'en',
+            'idempotency_key' => 'b209dbe0-4b1f-4457-a539-e37c5f8c6616',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('incident_reports', [
+            'idempotency_key' => 'b209dbe0-4b1f-4457-a539-e37c5f8c6616',
+            'reporter_ip' => '198.51.100.55',
+        ]);
     }
 
     public function test_a_new_report_returns_a_private_tracking_link_that_loads(): void

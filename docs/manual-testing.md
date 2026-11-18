@@ -41,7 +41,7 @@ Both accounts use password `ManualTest2026!`:
 - Three-step in-page report flow, optional browser location pin, camera-only photo capture, retry behavior, and copy/share confirmation actions.
 - Tracking status, reporter messages, and staff replies through the sample tracking link.
 - Tracking status timeline refresh, expiry countdown, and private photo access on the sample tracking link.
-- Staff login, queue polling, report triage, and message-thread close/reply at `/staff/login`.
-- Admin login, summary dashboard, and incident queue at `/admin/login`.
+- Unified staff/admin login at `/login`; staff queue, polling, triage, and messaging at `/queue`.
+- Shared dashboard and live map at `/dashboard` and `/live-map`; administrator queue and configuration remain under `/admin`.
 
 This is a local test setup. The sample incident is fictional; do not submit a real emergency through it.

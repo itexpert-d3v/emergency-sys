@@ -1,12 +1,12 @@
 <aside class="operations-sidebar" aria-label="Operations sidebar">
-    <a class="operations-brand" href="{{ route('admin.dashboard') }}" aria-label="SOU operations home">
+    <a class="operations-brand" href="{{ route('operations.dashboard') }}" aria-label="SOU operations home">
         @include('components.brand-marks')
         <span><strong>Kalibo MDRRMO</strong><small>Special Operations Unit</small></span>
     </a>
     @include('admin.navigation-links')
     <div class="operations-sidebar-bottom">
         <span class="operations-user"><span class="operations-user-dot" aria-hidden="true"></span>{{ auth()->user()->name }}</span>
-        <form method="POST" action="{{ route('admin.logout') }}">@csrf<button type="submit" class="operations-signout">Sign out</button></form>
+        <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="operations-signout">Sign out</button></form>
     </div>
 </aside>
 <div class="operations-mobile-header">
@@ -20,7 +20,7 @@
             </summary>
             <div class="operations-mobile-menu-panel">
                 @include('admin.navigation-links')
-                <form method="POST" action="{{ route('admin.logout') }}">@csrf<button type="submit" class="operations-signout">Sign out</button></form>
+                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="operations-signout">Sign out</button></form>
             </div>
         </details>
     </div>

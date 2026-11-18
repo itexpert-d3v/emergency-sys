@@ -9,27 +9,35 @@ const savedTheme = () => {
     try {
         const value = localStorage.getItem(themeKey);
 
-        return value === 'dark' || value === 'light' ? value : null;
+        return value === 'dark' || value === 'light' ? value : 'system';
     } catch {
-        return null;
+        return 'system';
     }
 };
 
-const applyTheme = (theme) => {
-    const isDark = theme === 'dark';
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+const applyTheme = (mode) => {
+    const isDark = mode === 'system' ? systemPrefersDark.matches : mode === 'dark';
 
     root.classList.toggle('dark', isDark);
+    root.style.colorScheme = isDark ? 'dark' : 'light';
     document.querySelectorAll('[data-theme-toggle]').forEach((control) => {
         const action = isDark ? 'Switch to light mode' : 'Switch to dark mode';
         control.setAttribute('aria-label', action);
         control.setAttribute('title', action);
     });
+    document.querySelectorAll('[data-appearance-choice]').forEach((control) => {
+        const selected = control.dataset.appearanceChoice === mode;
+        control.setAttribute('aria-pressed', String(selected));
+        control.classList.toggle('is-selected', selected);
+    });
 };
 
-const preferredTheme = savedTheme()
-    ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-applyTheme(preferredTheme);
+applyTheme(savedTheme());
+systemPrefersDark.addEventListener('change', () => {
+    if (savedTheme() === 'system') applyTheme('system');
+});
 
 document.addEventListener('click', (event) => {
     if (!(event.target instanceof Element)) return;
@@ -46,6 +54,24 @@ document.addEventListener('click', (event) => {
     } catch {
         // Theme switching still works when browser storage is unavailable.
     }
+});
+
+document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+
+    const control = event.target.closest('[data-appearance-choice]');
+    if (!control) return;
+
+    const mode = control.dataset.appearanceChoice;
+    if (!['light', 'dark', 'system'].includes(mode)) return;
+
+    try {
+        if (mode === 'system') localStorage.removeItem(themeKey);
+        else localStorage.setItem(themeKey, mode);
+    } catch {
+        // The current page still applies the selected mode without storage.
+    }
+    applyTheme(mode);
 });
 
 const formatStatus = (status) => status.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -154,7 +180,6 @@ const connectReportProgress = () => {
 
     if (!form || !bar || !label) return;
 
-    const category = form.querySelector('#category_id');
     const description = form.querySelector('#description');
     const location = form.querySelector('#location_text');
     const latitude = form.querySelector('#latitude');
@@ -164,17 +189,16 @@ const connectReportProgress = () => {
 
     const update = () => {
         const completed = [
-            category.value !== '',
             description.value.trim().length >= Number(description.minLength),
             location.value.trim() !== '' || (latitude.value !== '' && longitude.value !== ''),
             name.value.trim() !== '',
             contact.checkValidity(),
         ].filter(Boolean).length;
-        const percent = Math.round(completed / 5 * 100);
+        const percent = Math.round(completed / 4 * 100);
 
         bar.style.width = `${percent}%`;
         bar.parentElement.setAttribute('aria-valuenow', String(percent));
-        label.textContent = `${completed} of 5 required details complete`;
+        label.textContent = `${completed} of 4 required details complete`;
     };
 
     form.addEventListener('input', update);

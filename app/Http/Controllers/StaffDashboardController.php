@@ -8,18 +8,31 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class StaffDashboardController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $queueCounts = [
+            'all' => IncidentReport::query()->where('status', '!=', 'rejected')->count(),
+            'submitted' => IncidentReport::query()->where('status', 'submitted')->count(),
+            'in_progress' => IncidentReport::query()->where('status', 'in_progress')->count(),
+            'completed' => IncidentReport::query()->whereIn('status', ['resolved', 'closed'])->count(),
+        ];
+
         $reports = IncidentReport::query()
+            ->where('status', '!=', 'rejected')
+            ->when($request->query('status') === 'completed', fn ($query) => $query->whereIn('status', ['resolved', 'closed']))
+            ->when($request->filled('status') && $request->query('status') !== 'completed', fn ($query) => $query->where('status', $request->query('status')))
             ->orderByDesc('submitted_at')
             ->get();
 
         return view('staff.dashboard', [
             'reports' => $reports,
+            'status' => $request->query('status', ''),
+            'queueCounts' => $queueCounts,
         ]);
     }
 
@@ -45,6 +58,8 @@ class StaffDashboardController extends Controller
         $data = $request->validate([
             'status' => ['nullable', 'string', 'in:submitted,in_progress,resolved,closed'],
             'priority' => ['nullable', 'string', 'in:low,medium,high,critical'],
+            'category_id' => [Rule::prohibitedIf(fn () => $request->user()?->role !== 'admin'), 'nullable', 'integer', 'exists:incident_categories,id,active,1'],
+            'remarks' => [Rule::prohibitedIf(fn () => $request->user()?->role !== 'admin'), 'nullable', 'string', 'max:2000'],
             'return_to' => ['nullable', 'string', 'in:staff,admin'],
         ]);
 
@@ -61,6 +76,14 @@ class StaffDashboardController extends Controller
                 $report->priority = $data['priority'];
             }
 
+            if (array_key_exists('category_id', $data)) {
+                $report->category_id = $data['category_id'];
+            }
+
+            if (array_key_exists('remarks', $data)) {
+                $report->remarks = $data['remarks'];
+            }
+
             $report->save();
 
             if ($statusChanged) {
@@ -73,7 +96,7 @@ class StaffDashboardController extends Controller
 
         $destination = ($data['return_to'] ?? 'staff') === 'admin' && $request->user()?->role === 'admin'
             ? 'admin.dashboard.queue'
-            : 'staff.dashboard';
+            : 'operations.queue';
 
         return redirect()->route($destination)->with('status', 'Report updated successfully.');
     }

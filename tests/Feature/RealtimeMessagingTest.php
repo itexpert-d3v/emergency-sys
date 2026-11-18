@@ -91,14 +91,14 @@ class RealtimeMessagingTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->post('/staff/reports/' . $report->id . '/messages', [
+            ->post('/reports/' . $report->id . '/messages', [
                 'body' => 'We have dispatched a team. Please stay clear.',
             ])
             ->assertOk()
             ->assertJsonPath('sender_type', 'staff');
 
         $this->actingAs($user)
-            ->post('/staff/reports/' . $report->id . '/messages', [
+            ->post('/reports/' . $report->id . '/messages', [
                 'body' => 'Thread closed by staff.',
                 'close_thread' => true,
             ])

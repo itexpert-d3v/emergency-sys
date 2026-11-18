@@ -57,6 +57,7 @@ class PublicReportingController extends Controller
         $request->merge([
             'reporting_for_other' => $request->boolean('reporting_for_other'),
             'victim_contactable' => $request->boolean('victim_contactable'),
+            'reporter_name' => trim((string) $request->input('reporter_name', '')),
         ]);
 
         $descriptionMin = (int) Setting::get('report.description_min_length', 20);
@@ -65,7 +66,6 @@ class PublicReportingController extends Controller
         $expiryDays = max(1, (int) Setting::get('report.expiry_days', 7));
 
         $data = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:incident_categories,id'],
             'description' => ['required', 'string', 'min:' . $descriptionMin, 'max:' . $descriptionMax],
             'location_text' => ['nullable', 'string', 'max:500', 'required_without_all:latitude,longitude'],
             // Photos are shrunk and converted to WebP, so the upload limit can be generous.
@@ -73,7 +73,7 @@ class PublicReportingController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'location_accuracy' => ['nullable', 'numeric', 'min:0'],
-            'reporter_name' => ['required', 'string', 'max:' . $reporterNameMax],
+            'reporter_name' => ['required', 'string', 'regex:/\A[\p{L}\p{M}]+(?:[ .\x27-]+[\p{L}\p{M}]+)*\.?\z/u', 'max:' . $reporterNameMax],
             'contact_number' => ['required', 'string', 'regex:/^\+63[0-9]{10,12}$/'],
             'reporting_for_other' => ['boolean'],
             'relationship' => [Rule::requiredIf(fn () => $request->boolean('reporting_for_other')), 'nullable', 'string', 'max:80'],
@@ -81,8 +81,6 @@ class PublicReportingController extends Controller
             'language' => ['nullable', 'string', Rule::in(array_keys($locales->all()))],
             'idempotency_key' => ['required', 'string', 'max:255'],
         ], [
-            'category_id.required' => 'Select an incident type.',
-            'category_id.exists' => 'The selected incident type is not available.',
             'description.required' => 'Describe what happened.',
             'description.min' => "Add a little more detail (at least {$descriptionMin} characters).",
             'description.max' => "Keep the description under {$descriptionMax} characters.",
@@ -93,26 +91,18 @@ class PublicReportingController extends Controller
             'photo.image' => 'The file must be a JPG, PNG, or WebP image.',
             'photo.mimes' => 'The file must be a JPG, PNG, or WebP image.',
             'reporter_name.required' => 'Enter your name.',
+            'reporter_name.regex' => 'Use letters only, with spaces, hyphens, apostrophes, or periods as separators.',
             'reporter_name.max' => 'The name is too long.',
             'contact_number.required' => 'Enter your contact number.',
             'contact_number.regex' => 'Use a Philippine number starting with +63, for example +639171234567.',
             'relationship.required' => 'Tell us how you know the person.',
         ]);
 
-        $category = IncidentCategory::query()
-            ->whereKey($data['category_id'])
-            ->active()
-            ->first();
-
-        if (! $category) {
-            throw ValidationException::withMessages([
-                'category_id' => ['The selected category is not available.'],
-            ]);
-        }
-
         $data['location_text'] = trim((string) ($data['location_text'] ?? ''));
+        
+        // NEW FALLBACK LOGIC: If they pinned the map but left the text blank, save a clean placeholder
         if ($data['location_text'] === '' && isset($data['latitude'], $data['longitude'])) {
-            $data['location_text'] = sprintf('Pinned location: %s, %s', $data['latitude'], $data['longitude']);
+            $data['location_text'] = 'Pinned via map (See map link)';
         }
 
         $existing = IncidentReport::query()
@@ -133,11 +123,11 @@ class PublicReportingController extends Controller
         $photoPath = $request->hasFile('photo') ? $photos->store($request->file('photo')) : null;
 
         $reportingForOther = (bool) ($data['reporting_for_other'] ?? false);
+        $reporterIp = $request->ip();
 
         try {
-            $report = DB::transaction(function () use ($data, $category, $expiryDays, $rawTrackingToken, $photoPath, $reportingForOther): IncidentReport {
+            $report = DB::transaction(function () use ($data, $expiryDays, $rawTrackingToken, $photoPath, $reportingForOther, $reporterIp): IncidentReport {
                 $report = IncidentReport::query()->create([
-                    'category_id' => $category->id,
                     'reference_code' => IncidentReport::nextReferenceCode(),
                     'description' => $data['description'],
                     'location_text' => $data['location_text'],
@@ -147,6 +137,7 @@ class PublicReportingController extends Controller
                     'location_accuracy' => $data['location_accuracy'] ?? null,
                     'reporter_name' => $data['reporter_name'],
                     'contact_number' => $data['contact_number'],
+                    'reporter_ip' => $reporterIp,
                     'reporting_for_other' => $reportingForOther,
                     'relationship' => $reportingForOther ? ($data['relationship'] ?? null) : null,
                     'victim_contactable' => $reportingForOther ? ($data['victim_contactable'] ?? null) : null,

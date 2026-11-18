@@ -128,8 +128,8 @@ document.querySelectorAll('[data-message-panel]').forEach((panel) => {
   if (token) setupThread(panel, `/track/${encodeURIComponent(token)}/messages`);
 });
 
-// Staff side (admin queue): each panel needs data-report-id
+// Operations side: each panel needs data-report-id
 document.querySelectorAll('[data-staff-message-panel]').forEach((panel) => {
   const id = panel.dataset.reportId;
-  if (id) setupThread(panel, `/staff/reports/${encodeURIComponent(id)}/messages`, panel.closest('details'));
+  if (id) setupThread(panel, `/reports/${encodeURIComponent(id)}/messages`, panel.closest('details'));
 });

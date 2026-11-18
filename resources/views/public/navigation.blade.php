@@ -16,7 +16,7 @@
             @if ($includeThemeToggle ?? true)
                 @include('components.theme-toggle', ['placement' => 'inline', 'iconOnly' => true, 'minimal' => true])
             @endif
-            <a href="{{ route('admin.login') }}" aria-label="MDRRMO admin sign in" title="MDRRMO admin sign in" class="inline-flex h-10 w-10 items-center justify-center p-2 text-white transition hover:text-amber-300 focus-visible:outline-white">
+            <a href="{{ route('login') }}" aria-label="MDRRMO operations sign in" title="MDRRMO operations sign in" class="inline-flex h-10 w-10 items-center justify-center p-2 text-white transition hover:text-amber-300 focus-visible:outline-white">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m6-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm9-1 1.2.7-.2 1.4 1.2.9-1 1.2.3 1.4-1.5.4-.7 1.2-1.3-.7-1.3.7-.7-1.2-1.5-.4.3-1.4-1-1.2 1.2-.9-.2-1.4L17 10l1-1.2Z"/><circle cx="17" cy="15" r="1.4"/></svg>
             </a>
         </div>

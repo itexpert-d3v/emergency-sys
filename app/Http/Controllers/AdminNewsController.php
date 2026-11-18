@@ -15,12 +15,13 @@ class AdminNewsController extends Controller
     public function index(Request $request): View
     {
         $status = (string) $request->query('status', '');
-        abort_if($status !== '' && ! in_array($status, NewsPost::STATUSES, true), 404);
+        abort_if($status !== '' && $status !== 'archived_scheduled' && ! in_array($status, NewsPost::STATUSES, true), 404);
 
         return view('admin.news.index', [
             'posts' => NewsPost::query()
                 ->with('author:id,name')
-                ->when($status !== '', fn ($query) => $query->where('status', $status))
+                ->when($status === 'archived_scheduled', fn ($query) => $query->whereIn('status', ['archived', 'scheduled']))
+                ->when($status !== '' && $status !== 'archived_scheduled', fn ($query) => $query->where('status', $status))
                 ->orderByRaw("CASE status WHEN 'draft' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'published' THEN 2 ELSE 3 END")
                 ->orderByDesc('published_at')
                 ->orderByDesc('updated_at')
@@ -62,6 +63,21 @@ class AdminNewsController extends Controller
         $post->save();
 
         return back()->with('status', 'News item status updated.');
+    }
+
+    /**
+     * Restore an archived news post back to draft status.
+     */
+    public function unarchive(NewsPost $post): RedirectResponse
+    {
+        if ($post->status === 'archived') {
+            $post->update([
+                'status' => 'draft',
+                'published_at' => null, // Reset date so it doesn't instantly publish
+            ]);
+        }
+
+        return back()->with('status', 'News item restored to draft. You can now edit and re-publish it.');
     }
 
     private function save(Request $request, NewsPost $post): RedirectResponse
@@ -133,6 +149,14 @@ class AdminNewsController extends Controller
         $post->attachments = $attachments;
         $post->save();
 
-        return redirect()->route('admin.news.edit', $post)->with('status', 'News item saved.');
+        // Determine success message based on the clicked button
+        $message = match ($data['action']) {
+            'publish' => 'News item published successfully.',
+            'schedule' => 'News item scheduled successfully.',
+            default => 'Draft saved successfully.',
+        };
+
+        // Redirect to the index list instead of staying on the edit page
+        return redirect()->route('admin.news.index')->with('status', $message);
     }
 }

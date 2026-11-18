@@ -1,25 +1,115 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{ $post->exists ? 'Edit update' : 'Create update' }} · MDRRMO</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
-<body class="operations-surface min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
-<div class="operations-shell">@include('admin.sidebar')<main class="operations-main">
-    <header class="operations-page-head"><div><p class="operations-eyebrow">Public information · Editor</p><h1>{{ $post->exists ? 'Edit news update' : 'Create news update' }}</h1></div><div class="operations-head-actions">@include('components.theme-toggle', ['placement' => 'inline', 'iconOnly' => true])<a href="{{ route('admin.news.index') }}" class="operations-head-link">Back to news list</a></div></header>
-    @if(session('status'))<p class="mb-4 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900" role="status">{{ session('status') }}</p>@endif
-    @if($errors->any())<div class="mb-4 border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><p class="font-black">Please correct the marked fields.</p><ul class="mt-2 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-    <form method="POST" action="{{ $post->exists ? route('admin.news.update', $post) : route('admin.news.store') }}" enctype="multipart/form-data" class="border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-900 sm:p-7">@csrf @if($post->exists)@method('PUT')@endif
-        <div class="grid gap-5 sm:grid-cols-2">
-            <div class="sm:col-span-2"><label for="title" class="mb-1 block text-sm font-bold">Headline</label><input id="title" name="title" value="{{ old('title', $post->title) }}" maxlength="180" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"></div>
-            <div><label for="slug" class="mb-1 block text-sm font-bold">URL slug <span class="font-normal text-slate-500">(optional)</span></label><input id="slug" name="slug" value="{{ old('slug', $post->slug) }}" maxlength="200" class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"></div>
-            <div><label for="category" class="mb-1 block text-sm font-bold">Category</label><select id="category" name="category" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">@foreach($categories as $value => $label)<option value="{{ $value }}" @selected(old('category', $post->category) === $value)>{{ $label }}</option>@endforeach</select></div>
-            <div><label for="severity" class="mb-1 block text-sm font-bold">Severity</label><select id="severity" name="severity" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">@foreach(\App\Models\NewsPost::SEVERITIES as $severity)<option value="{{ $severity }}" @selected(old('severity', $post->severity ?: 'normal') === $severity)>{{ ucfirst($severity) }}</option>@endforeach</select></div>
-            <div class="flex items-end"><label class="flex min-h-11 items-center gap-3 text-sm font-bold"><input type="checkbox" name="is_banner" value="1" @checked(old('is_banner', $post->is_banner)) class="h-4 w-4 rounded border-slate-400 text-blue-800 focus:ring-blue-800">Pin as emergency banner</label></div>
-            <div class="sm:col-span-2"><label for="excerpt" class="mb-1 block text-sm font-bold">Summary</label><textarea id="excerpt" name="excerpt" rows="2" maxlength="500" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">{{ old('excerpt', $post->excerpt) }}</textarea></div>
-            <div class="sm:col-span-2"><label for="body" class="mb-1 block text-sm font-bold">Notice body <span class="font-normal text-slate-500">(Markdown supported)</span></label><textarea id="body" name="body" rows="14" maxlength="50000" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 font-mono text-sm leading-6 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">{{ old('body', $post->body) }}</textarea></div>
-            <div><label for="published_at" class="mb-1 block text-sm font-bold">Scheduled publication time</label><input id="published_at" type="datetime-local" name="published_at" value="{{ old('published_at', $post->status === 'scheduled' ? $post->published_at?->format('Y-m-d\TH:i') : '') }}" class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"></div>
-            <div><label for="expires_at" class="mb-1 block text-sm font-bold">End public visibility <span class="font-normal text-slate-500">(optional)</span></label><input id="expires_at" type="datetime-local" name="expires_at" value="{{ old('expires_at', $post->expires_at?->format('Y-m-d\TH:i')) }}" class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white"></div>
-            <div class="sm:col-span-2"><label for="attachments" class="mb-1 block text-sm font-bold">Attachments and infographics</label><input id="attachments" type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" class="block w-full text-sm text-slate-700 file:mr-4 file:min-h-10 file:border-0 file:bg-blue-800 file:px-4 file:py-2 file:font-bold file:text-white dark:text-slate-200 dark:file:bg-blue-400 dark:file:text-slate-950"><p class="mt-1 text-xs text-slate-600 dark:text-slate-300">PDF or image files, up to 10 MB each. Add up to five files per save.</p></div>
-            @if(count($post->attachments ?? []))<fieldset class="sm:col-span-2"><legend class="text-sm font-bold">Current attachments</legend><ul class="mt-2 divide-y divide-slate-200 dark:divide-slate-700">@foreach($post->attachments as $index => $attachment)<li class="flex items-center justify-between gap-3 py-2 text-sm"><span class="break-all">{{ $attachment['name'] }}</span><label class="flex shrink-0 items-center gap-2 text-xs font-bold"><input type="checkbox" name="remove_attachments[]" value="{{ $index }}" class="rounded border-slate-400">Remove</label></li>@endforeach</ul></fieldset>@endif
-        </div>
-        <div class="mt-7 flex flex-wrap items-center gap-3 border-t border-slate-300 pt-5 dark:border-slate-700"><button type="submit" name="action" value="draft" class="min-h-10 rounded-[4px] border border-slate-400 px-4 text-sm font-black text-slate-800 hover:bg-slate-100 dark:border-slate-600 dark:text-white">Save draft</button><button type="submit" name="action" value="publish" class="min-h-10 rounded-[4px] bg-blue-800 px-4 text-sm font-black text-white hover:bg-blue-900 dark:bg-blue-400 dark:text-slate-950">Publish now</button><button type="submit" name="action" value="schedule" class="min-h-10 rounded-[4px] bg-amber-500 px-4 text-sm font-black text-slate-950 hover:bg-amber-400">Schedule</button><span class="text-xs text-slate-600 dark:text-slate-300">Published items are immediately visible on the public portal.</span></div>
-    </form>
-</main></div></body></html>
+@extends('admin.partials.ops-theme')
+
+@section('title'){{ $post->exists ? 'Edit update' : 'Create update' }} · MDRRMO@endsection
+
+@section('content')
+        <header class="operations-page-head">
+            <div>
+                <p class="operations-eyebrow">Public information · Editor</p>
+                <h1>{{ $post->exists ? 'Edit news update' : 'Create news update' }}</h1>
+            </div>
+            <div class="operations-head-actions">
+                <a href="{{ route('admin.news.index') }}" class="operations-head-link">Back to news list</a>
+            </div>
+        </header>
+
+        @if(session('status'))
+            <p class="mb-4 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200" role="status">{{ session('status') }}</p>
+        @endif
+        @if($errors->any())
+            <div class="mb-4 border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200" role="alert">
+                <p class="font-black">Please correct the marked fields.</p>
+                <ul class="mt-2 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ $post->exists ? route('admin.news.update', $post) : route('admin.news.store') }}" enctype="multipart/form-data" class="border border-slate-300 bg-white p-5 dark:border-slate-700 dark:bg-slate-900 sm:p-7">
+            @csrf 
+            @if($post->exists) @method('PUT') @endif
+            
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="title" class="mb-1 block text-sm font-bold">Headline</label>
+                    <input id="title" name="title" value="{{ old('title', $post->title) }}" maxlength="180" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                </div>
+                
+                <div>
+                    <label for="slug" class="mb-1 block text-sm font-bold">URL slug <span class="font-normal text-slate-500">(optional)</span></label>
+                    <input id="slug" name="slug" value="{{ old('slug', $post->slug) }}" maxlength="200" class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                </div>
+                
+                <div>
+                    <label for="category" class="mb-1 block text-sm font-bold">Category</label>
+                    <select id="category" name="category" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                        @foreach($categories as $value => $label)
+                            <option value="{{ $value }}" @selected(old('category', $post->category) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="severity" class="mb-1 block text-sm font-bold">Severity</label>
+                    <select id="severity" name="severity" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                        @foreach(\App\Models\NewsPost::SEVERITIES as $severity)
+                            <option value="{{ $severity }}" @selected(old('severity', $post->severity ?: 'normal') === $severity)>{{ ucfirst($severity) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                
+                <div class="flex items-end">
+                    <label class="flex min-h-11 items-center gap-3 text-sm font-bold">
+                        <input type="checkbox" name="is_banner" value="1" @checked(old('is_banner', $post->is_banner)) class="h-4 w-4 rounded border-slate-400 text-blue-800 focus:ring-blue-800">Pin as emergency banner
+                    </label>
+                </div>
+                
+                <div class="sm:col-span-2">
+                    <label for="excerpt" class="mb-1 block text-sm font-bold">Summary</label>
+                    <textarea id="excerpt" name="excerpt" rows="2" maxlength="500" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">{{ old('excerpt', $post->excerpt) }}</textarea>
+                </div>
+                
+                <div class="sm:col-span-2">
+                    <label for="body" class="mb-1 block text-sm font-bold">Notice body <span class="font-normal text-slate-500">(Markdown supported)</span></label>
+                    <textarea id="body" name="body" rows="14" maxlength="50000" required class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 font-mono text-sm leading-6 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">{{ old('body', $post->body) }}</textarea>
+                </div>
+                
+                <div>
+                    <label for="published_at" class="mb-1 block text-sm font-bold">Scheduled publication time</label>
+                    <input id="published_at" type="datetime-local" name="published_at" value="{{ old('published_at', $post->status === 'scheduled' ? $post->published_at?->format('Y-m-d\TH:i') : '') }}" class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                </div>
+                
+                <div>
+                    <label for="expires_at" class="mb-1 block text-sm font-bold">End public visibility <span class="font-normal text-slate-500">(optional)</span></label>
+                    <input id="expires_at" type="datetime-local" name="expires_at" value="{{ old('expires_at', $post->expires_at?->format('Y-m-d\TH:i')) }}" class="w-full rounded-[4px] border border-slate-300 bg-white px-3 py-2.5 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                </div>
+                
+                <div class="sm:col-span-2">
+                    <label for="attachments" class="mb-1 block text-sm font-bold">Attachments and infographics</label>
+                    <input id="attachments" type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" class="block w-full text-sm text-slate-700 file:mr-4 file:min-h-10 file:border-0 file:bg-blue-800 file:px-4 file:py-2 file:font-bold file:text-white dark:text-slate-200 dark:file:bg-blue-400 dark:file:text-slate-950">
+                    <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">PDF or image files, up to 10 MB each. Add up to five files per save.</p>
+                </div>
+                
+                @if(count($post->attachments ?? []))
+                    <fieldset class="sm:col-span-2">
+                        <legend class="text-sm font-bold">Current attachments</legend>
+                        <ul class="mt-2 divide-y divide-slate-200 dark:divide-slate-700">
+                            @foreach($post->attachments as $index => $attachment)
+                                <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                                    <span class="break-all">{{ $attachment['name'] }}</span>
+                                    <label class="flex shrink-0 items-center gap-2 text-xs font-bold">
+                                        <input type="checkbox" name="remove_attachments[]" value="{{ $index }}" class="rounded border-slate-400">Remove
+                                    </label>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </fieldset>
+                @endif
+            </div>
+            
+            <div class="mt-7 flex flex-wrap items-center gap-3 border-t border-slate-300 pt-5 dark:border-slate-700">
+                <button type="submit" name="action" value="draft" class="min-h-10 rounded-[4px] border border-slate-400 px-4 text-sm font-black text-slate-800 hover:bg-slate-100 dark:border-slate-600 dark:text-white dark:hover:bg-slate-800">Save draft</button>
+                <button type="submit" name="action" value="publish" class="min-h-10 rounded-[4px] bg-blue-800 px-4 text-sm font-black text-white hover:bg-blue-900 dark:bg-blue-400 dark:text-slate-950">Publish now</button>
+                <button type="submit" name="action" value="schedule" class="min-h-10 rounded-[4px] bg-amber-500 px-4 text-sm font-black text-slate-950 hover:bg-amber-400">Schedule</button>
+                <span class="text-xs text-slate-600 dark:text-slate-300">Published items are immediately visible on the public portal.</span>
+            </div>
+        </form>
+@endsection

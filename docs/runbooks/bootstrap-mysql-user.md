@@ -12,6 +12,14 @@ its service accounts are provisioned locally using the same least-privilege
 matrix. Do not treat the local MariaDB setup as satisfying the MySQL 8
 production requirement.
 
+Configure `TRUSTED_PROXIES` as a comma-separated list of the exact proxy IPs or
+CIDRs that connect to the app (for example, your load balancer or Cloudflare
+egress ranges). Keep the default loopback entries for local development. Do
+not use `*` unless the app is unreachable except through a controlled proxy;
+otherwise clients can spoof forwarded IP headers. IP bans are stored for
+moderation visibility and enforced with Laravel's RateLimiter for at most 24
+hours; use phone bans for persistent blocking.
+
 ---
 
 ## 1. Confirm MySQL 8 and server defaults
@@ -93,6 +101,22 @@ the user's global account or its grants on other schemas.
     GRANT SELECT, INSERT, UPDATE, DELETE ON mdrrmo.incident_reports
       TO 'mdrrmo_app'@'127.0.0.1';
 
+    -- Queue moderation (soft delete/restore and reject/reopen reports).
+    GRANT SELECT, INSERT, UPDATE, DELETE ON mdrrmo.incident_reports
+      TO 'mdrrmo_app'@'localhost';
+    GRANT SELECT, INSERT, UPDATE, DELETE ON mdrrmo.incident_reports
+      TO 'mdrrmo_app'@'127.0.0.1';
+
+    -- Settings lists bans and lets admins add/remove them.
+    GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_ips
+      TO 'mdrrmo_app'@'localhost';
+    GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_ips
+      TO 'mdrrmo_app'@'127.0.0.1';
+    GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_phones
+      TO 'mdrrmo_app'@'localhost';
+    GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_phones
+      TO 'mdrrmo_app'@'127.0.0.1';
+
     -- The app can read and append to the audit log, but cannot change or
     -- remove existing rows. grant_probe uses this same protected matrix.
     GRANT SELECT, INSERT ON mdrrmo.audit_logs TO 'mdrrmo_app'@'localhost';
@@ -120,6 +144,10 @@ Apply the same per-table matrix as Step 5: grant the app DML on each runtime
 table except `audit_logs`, grant app and audit users only `SELECT, INSERT` on
 `audit_logs` and `grant_probe`, and give the audit user no rights on other
 tables. Do not add schema-wide DML grants.
+
+For ban management, grant `SELECT, INSERT, DELETE` on both
+`mdrrmo_test.banned_ips` and `mdrrmo_test.banned_phones` to `mdrrmo_app` at
+`localhost` and `127.0.0.1`, matching the production schema grants above.
 
     REVOKE ALL PRIVILEGES ON mdrrmo_test.* FROM 'mdrrmo_app'@'localhost';
     REVOKE ALL PRIVILEGES ON mdrrmo_test.* FROM 'mdrrmo_app'@'127.0.0.1';
