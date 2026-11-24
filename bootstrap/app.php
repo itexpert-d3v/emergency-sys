@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\EnsureCorrelationId;
 use App\Http\Middleware\EnsureUserRole;
+use App\Http\Middleware\PrivateAuthenticatedResponse;
+use App\Http\Middleware\ProgressiveRateLimit;
 use App\Http\Middleware\SetPublicLocale;
 use App\Http\Middleware\VerifyTurnstile;
 use Illuminate\Foundation\Application;
@@ -24,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: $trustedProxies);
 
         $middleware->append(EnsureCorrelationId::class);
+        $middleware->append(PrivateAuthenticatedResponse::class);
+        $middleware->appendToGroup('web', ProgressiveRateLimit::class);
+        $middleware->appendToGroup('api', ProgressiveRateLimit::class);
 
         $middleware->redirectGuestsTo(fn (Request $request) => route('login'));
 

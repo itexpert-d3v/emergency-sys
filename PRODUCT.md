@@ -14,7 +14,7 @@ web
 
 ## Product Purpose
 
-An account-free emergency reporting, response-coordination, and tracking service for the MDRRMO. It collects useful report details, communicates verified response updates, and helps residents stay informed. Anyone in immediate danger must still call the local emergency hotline.
+An account-free emergency reporting, response-coordination, and tracking service for the MDRRMO. It collects useful report details, communicates verified response updates, and helps residents stay informed.
 
 ## Positioning
 

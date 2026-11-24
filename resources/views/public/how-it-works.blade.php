@@ -1,8 +1,14 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head><meta charset="UTF-8">@include('partials.theme-init')<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>How it works · Kalibo MDRRMO</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
-<body class="public-surface min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
-<div class="app-photo-canvas min-h-screen">@include('public.navigation')
+@extends('layouts.public')
+
+@section('title', 'How it works · Kalibo MDRRMO')
+@section('body-style')
+    background-image: url('{{ asset('assets/lgu kalibo.jpg') }}');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+@endsection
+
+@section('content')
     <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header class="max-w-3xl border-b border-slate-300 pb-6 dark:border-slate-700"><h1 class="text-3xl font-black leading-tight text-slate-950 dark:text-white sm:text-4xl">How it works</h1><p class="mt-3 text-base leading-7 text-slate-700 dark:text-slate-200">A clear path to submit a report and return for recorded updates.</p></header>
         <ol class="mt-7 divide-y divide-slate-300 dark:divide-slate-700">
@@ -12,5 +18,4 @@
         </ol>
         <img src="{{ asset('assets/municipal-hall.jpg') }}" alt="Municipal hall of Kalibo, Aklan" loading="lazy" class="mt-8 aspect-[16/7] w-full border border-slate-300 object-cover dark:border-slate-700">
     </main>
-    @include('public.footer')
-</div></body></html>
+@endsection

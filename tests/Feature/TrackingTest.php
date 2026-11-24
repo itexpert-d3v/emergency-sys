@@ -19,6 +19,7 @@ class TrackingTest extends TestCase
 
         $this->get('/track?reference=' . $report->reference_code)
             ->assertStatus(404)
+            ->assertSee('name="robots" content="noindex,nofollow"', false)
             ->assertSee('This tracking link is invalid or has expired.');
     }
 
@@ -36,6 +37,7 @@ class TrackingTest extends TestCase
 
         $this->get('/track?reference=' . $report->reference_code . '&token=' . $token)
             ->assertOk()
+            ->assertSee('name="robots" content="noindex,nofollow"', false)
             ->assertSee($report->reference_code)
             ->assertSee('Submitted')
             ->assertDontSee($report->contact_number);

@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\IncidentReport;
-use App\Models\IncidentCategory;
 use App\Models\BannedIp;
 use App\Models\BannedPhone;
+use App\Models\IncidentCategory;
+use App\Models\IncidentReport;
+use App\Services\Security\ProgressiveRateLimitState;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
-use Carbon\Carbon;
 
 class AdminDashboardController extends Controller
 {
@@ -22,7 +24,7 @@ class AdminDashboardController extends Controller
         if ($selectedMonth) {
             $startDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
             $endDate = $startDate->copy()->endOfMonth();
-            
+
             $dailyCounts = IncidentReport::query()
                 ->whereBetween('submitted_at', [$startDate, $endDate])
                 ->selectRaw('DATE(submitted_at) as report_date, COUNT(*) as total')
@@ -32,6 +34,7 @@ class AdminDashboardController extends Controller
             $reportTrend = collect(range(1, $endDate->daysInMonth))->map(function (int $day) use ($startDate, $dailyCounts): array {
                 $date = $startDate->copy()->day($day);
                 $key = $date->toDateString();
+
                 return ['label' => $date->format('j'), 'date' => $key, 'count' => (int) ($dailyCounts[$key] ?? 0)];
             });
         } else {
@@ -42,10 +45,11 @@ class AdminDashboardController extends Controller
                 ->selectRaw('DATE(submitted_at) as report_date, COUNT(*) as total')
                 ->groupBy('report_date')
                 ->pluck('total', 'report_date');
-                
+
             $reportTrend = collect(range(6, 0))->map(function (int $daysAgo) use ($today, $dailyCounts): array {
                 $date = $today->copy()->subDays($daysAgo);
                 $key = $date->toDateString();
+
                 return ['label' => $date->format('D'), 'date' => $key, 'count' => (int) ($dailyCounts[$key] ?? 0)];
             });
         }
@@ -53,9 +57,10 @@ class AdminDashboardController extends Controller
         $trendMax = max(1, (int) $reportTrend->max('count'));
         $reportTrend = $reportTrend->map(function (array $day) use ($trendMax): array {
             $day['height'] = $day['count'] === 0 ? 4 : max(12, (int) round($day['count'] / $trendMax * 100));
+
             return $day;
         });
-        
+
         $statusCounts = IncidentReport::query()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -96,7 +101,8 @@ class AdminDashboardController extends Controller
             ->when($request->query('status') === 'completed', fn ($query) => $query->whereIn('status', ['resolved', 'closed']))
             ->when($request->filled('status') && $request->query('status') !== 'completed', fn ($query) => $query->where('status', $request->query('status')))
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.queue', [
             'reports' => $reports,
@@ -108,7 +114,7 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    public function acceptReport(Request $request, IncidentReport $report): \Illuminate\Http\JsonResponse|RedirectResponse
+    public function acceptReport(Request $request, IncidentReport $report): JsonResponse|RedirectResponse
     {
         $accepted = IncidentReport::query()
             ->whereKey($report->id)
@@ -131,7 +137,7 @@ class AdminDashboardController extends Controller
         return response()->json($result);
     }
 
-    public function banIp(Request $request): RedirectResponse
+    public function banIp(Request $request, ProgressiveRateLimitState $rateLimitState): RedirectResponse
     {
         $data = $request->validate(['ip_address' => ['required', 'ip']]);
         $ipAddress = BannedIp::normalize($data['ip_address']);
@@ -140,6 +146,7 @@ class AdminDashboardController extends Controller
             ['ip_address' => $ipAddress],
             ['expires_at' => now()->addHours(24)]
         );
+        $rateLimitState->clearIp($ipAddress);
         $rateLimitKey = BannedIp::limiterKey($ipAddress);
         RateLimiter::clear($rateLimitKey);
         RateLimiter::hit($rateLimitKey, now()->diffInSeconds($ban->expires_at));
@@ -147,18 +154,20 @@ class AdminDashboardController extends Controller
         return $this->returnToModerationOrQueue($request, 'IP address banned.');
     }
 
-    public function unbanIp(BannedIp $bannedIp): RedirectResponse
+    public function unbanIp(BannedIp $bannedIp, ProgressiveRateLimitState $rateLimitState): RedirectResponse
     {
+        $rateLimitState->clearIp($bannedIp->ip_address);
         RateLimiter::clear(BannedIp::limiterKey($bannedIp->ip_address));
         $bannedIp->delete();
 
         return redirect()->route('admin.moderation.index')->with('status', 'IP address unbanned.');
     }
 
-    public function unbanReporterIp(IncidentReport $report, Request $request): RedirectResponse
+    public function unbanReporterIp(IncidentReport $report, Request $request, ProgressiveRateLimitState $rateLimitState): RedirectResponse
     {
         if ($report->reporter_ip) {
             $ipAddress = BannedIp::normalize($report->reporter_ip);
+            $rateLimitState->clearIp($ipAddress);
             RateLimiter::clear(BannedIp::limiterKey($ipAddress));
             BannedIp::query()->where('ip_address', $ipAddress)->delete();
         }
@@ -238,7 +247,7 @@ class AdminDashboardController extends Controller
     }
 
     /** Returns active reports, pending acceptance details, and recent conversation messages. */
-    public function liveMap(): \Illuminate\Http\JsonResponse
+    public function liveMap(): JsonResponse
     {
         // 2. ACTIVE REPORTS
         $reports = IncidentReport::query()
@@ -290,7 +299,7 @@ class AdminDashboardController extends Controller
             'reports' => $reports,
             'pending_reports' => $pendingReports,
         ])->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-          ->header('Pragma', 'no-cache')
-          ->header('Expires', '0');
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 }

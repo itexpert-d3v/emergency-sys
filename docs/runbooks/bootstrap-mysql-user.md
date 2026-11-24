@@ -107,10 +107,15 @@ the user's global account or its grants on other schemas.
     GRANT SELECT, INSERT, UPDATE, DELETE ON mdrrmo.incident_reports
       TO 'mdrrmo_app'@'127.0.0.1';
 
-    -- Settings lists bans and lets admins add/remove them.
-    GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_ips
+    -- Settings lists bans and lets admins add/remove them; progressive
+    -- escalation updates ban metadata. Keep violation history append-only.
+    GRANT SELECT, INSERT, UPDATE, DELETE ON mdrrmo.banned_ips
       TO 'mdrrmo_app'@'localhost';
-    GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_ips
+    GRANT SELECT, INSERT, UPDATE, DELETE ON mdrrmo.banned_ips
+      TO 'mdrrmo_app'@'127.0.0.1';
+    GRANT SELECT, INSERT ON mdrrmo.rate_limit_violations
+      TO 'mdrrmo_app'@'localhost';
+    GRANT SELECT, INSERT ON mdrrmo.rate_limit_violations
       TO 'mdrrmo_app'@'127.0.0.1';
     GRANT SELECT, INSERT, DELETE ON mdrrmo.banned_phones
       TO 'mdrrmo_app'@'localhost';
@@ -145,9 +150,12 @@ table except `audit_logs`, grant app and audit users only `SELECT, INSERT` on
 `audit_logs` and `grant_probe`, and give the audit user no rights on other
 tables. Do not add schema-wide DML grants.
 
-For ban management, grant `SELECT, INSERT, DELETE` on both
-`mdrrmo_test.banned_ips` and `mdrrmo_test.banned_phones` to `mdrrmo_app` at
-`localhost` and `127.0.0.1`, matching the production schema grants above.
+For ban management, grant `SELECT, INSERT, UPDATE, DELETE` on
+`mdrrmo_test.banned_ips`, `SELECT, INSERT, DELETE` on
+`mdrrmo_test.banned_phones`, and `SELECT, INSERT` on
+`mdrrmo_test.rate_limit_violations` to `mdrrmo_app` at `localhost` and
+`127.0.0.1`, matching the production schema grants above. Keep violation logs
+append-only; do not grant UPDATE or DELETE on `rate_limit_violations`.
 
     REVOKE ALL PRIVILEGES ON mdrrmo_test.* FROM 'mdrrmo_app'@'localhost';
     REVOKE ALL PRIVILEGES ON mdrrmo_test.* FROM 'mdrrmo_app'@'127.0.0.1';

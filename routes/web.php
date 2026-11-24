@@ -21,6 +21,30 @@ use App\Http\Middleware\BlockBannedPhone;
 use App\Models\NewsPost;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+
+Route::get('/manifest.webmanifest', function () {
+    return response()->file(public_path('manifest.webmanifest'), [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'public, max-age=3600',
+    ]);
+});
+
+Route::get('/sw.js', function () {
+    return response()->file(public_path('sw.js'), [
+        'Content-Type' => 'application/javascript; charset=utf-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Service-Worker-Allowed' => '/',
+    ]);
+});
+
+Route::get('/offline.html', function () {
+    return response()->file(public_path('offline.html'), [
+        'Content-Type' => 'text/html; charset=utf-8',
+        'Cache-Control' => 'no-cache',
+        'X-Robots-Tag' => 'noindex, nofollow',
+    ]);
+});
 
 Route::get('/up', function () {
     return response()->json(['status' => 'ok']);
@@ -71,7 +95,7 @@ Route::post('/report', [PublicReportingController::class, 'storeFromForm'])
     ->middleware([SetPublicLocale::class, 'throttle:public-report', BlockBannedIp::class, BlockBannedPhone::class, 'turnstile'])
     ->name('public.report.store');
 
-Route::middleware([SetPublicLocale::class, 'throttle:30,1'])->group(function () {
+Route::middleware([SetPublicLocale::class, 'throttle:news-read'])->group(function () {
     Route::get('/news', [NewsController::class, 'index'])->name('news.index');
     Route::get('/news/{slug}/attachments/{attachment}', [NewsController::class, 'attachment'])
         ->whereNumber('attachment')
@@ -94,7 +118,9 @@ Route::middleware([SetPublicLocale::class])->group(function () {
         ->name('track.messages.store');
 });
 
-Route::get('/login', [SessionController::class, 'create'])->middleware('throttle:public-read')->name('login');
+Route::get('/admin', [SessionController::class, 'create'])->middleware('throttle:public-read')->name('login');
+Route::post('/admin', [SessionController::class, 'store'])->middleware('throttle:auth');
+Route::redirect('/login', '/admin')->middleware('throttle:public-read');
 Route::post('/login', [SessionController::class, 'store'])->middleware('throttle:auth');
 Route::post('/logout', [SessionController::class, 'destroy'])->middleware(['auth', 'throttle:staff-write'])->name('logout');
 
@@ -132,9 +158,20 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin,staff', 'throttle:staff-read'])->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('operations.dashboard');
         Route::get('/live-map/alarm-audio', [AdminSettingsController::class, 'alarmAudio'])->name('operations.live-map.alarm-audio');
+        Route::get('/live-map/command-center-logo', [AdminSettingsController::class, 'commandCenterLogo'])->name('operations.live-map.command-center-logo');
         Route::get('/live-map', function () {
+            $logoPath = Setting::get('admin.command_center_logo_path');
+
             return view('admin.live-map', [
                 'alarmAudioUrl' => Setting::get('admin.alarm_audio_path') ? route('operations.live-map.alarm-audio') : null,
+                'commandCenterLogoUrl' => is_string($logoPath) && Storage::disk('local')->exists($logoPath)
+                    ? route('operations.live-map.command-center-logo')
+                    : asset('assets/sou.png'),
+                'commandCenterLocation' => Setting::get('admin.command_center_location', [
+                    'mode' => 'manual',
+                    'latitude' => 11.7061,
+                    'longitude' => 122.3687,
+                ]),
                 'queueUrl' => auth()->user()->role === 'admin' ? route('admin.dashboard.queue') : route('operations.queue'),
             ]);
         })->name('operations.live-map');
@@ -159,6 +196,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/admin/users/{user}', [UserManagementController::class, 'destroy'])->name('admin.users.destroy');
     });
     Route::middleware(['role:admin', 'throttle:admin-sensitive'])->group(function () {
+        Route::post('/admin/settings/command-center-location', [AdminSettingsController::class, 'updateCommandCenterLocation'])->name('admin.settings.command-center-location.update');
+        Route::post('/admin/settings/command-center-logo', [AdminSettingsController::class, 'storeCommandCenterLogo'])->name('admin.settings.command-center-logo.store');
+        Route::delete('/admin/settings/command-center-logo', [AdminSettingsController::class, 'removeCommandCenterLogo'])->name('admin.settings.command-center-logo.destroy');
         Route::post('/admin/settings/report-intake', [AdminSettingsController::class, 'updateReportSettings'])->name('admin.settings.report-intake.update');
         Route::post('/admin/settings/alarm-audio', [AdminSettingsController::class, 'storeAlarmAudio'])->name('admin.settings.alarm-audio.store');
         Route::delete('/admin/settings/alarm-audio', [AdminSettingsController::class, 'removeAlarmAudio'])->name('admin.settings.alarm-audio.destroy');

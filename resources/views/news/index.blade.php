@@ -1,16 +1,14 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    @include('partials.theme-init')
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News &amp; Emergency Updates · MDRRMO</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="public-surface min-h-screen bg-slate-50 text-slate-800 antialiased dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/lgu kalibo.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
-    <div class="app-photo-canvas min-h-screen">
-        @include('public.navigation')
-        
+@extends('layouts.public')
+
+@section('title', 'News & Emergency Updates · MDRRMO')
+@section('body-style')
+    background-image: url('{{ asset('assets/lgu kalibo.jpg') }}');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+@endsection
+
+@section('content')
         <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             
             {{-- Emergency Alerts Banner --}}
@@ -142,7 +140,4 @@
             </div>
         </main>
         
-        @include('public.footer')
-    </div>
-</body>
-</html>
+@endsection

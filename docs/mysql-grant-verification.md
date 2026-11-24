@@ -17,8 +17,10 @@ cancel UPDATE, DELETE, or DDL inherited from a schema-wide grant. The app and
 audit accounts must have no schema-wide grants in the protected schemas;
 runtime permissions are granted table by table. Repeat the app grants for new
 runtime tables after migrations, excluding `audit_logs`. The admin moderation
-page requires `SELECT, INSERT, DELETE` on `banned_ips` and `banned_phones`; the
-audit account must not receive access to either table. The app also needs
+page requires `SELECT, INSERT, UPDATE, DELETE` on `banned_ips` (including
+progressive ban metadata), `SELECT, INSERT, DELETE` on `banned_phones`, and
+`SELECT, INSERT` on `rate_limit_violations`. Keep violation history append-only;
+the audit account must not receive access to these tables. The app also needs
 `SELECT, INSERT, UPDATE, DELETE` on `incident_reports` for queue triage,
 soft-delete/restore, and reject/reopen actions. IP bans use Laravel's
 RateLimiter and expire after 24 hours; phone bans remain active until an admin

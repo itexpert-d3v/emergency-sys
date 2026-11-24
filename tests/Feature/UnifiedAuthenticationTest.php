@@ -31,6 +31,29 @@ class UnifiedAuthenticationTest extends TestCase
         $this->post('/admin/login')->assertNotFound();
     }
 
+    public function test_sign_out_redirects_to_the_admin_login_with_the_requested_background(): void
+    {
+        $staff = User::factory()->create(['role' => 'staff']);
+
+        $this->actingAs($staff)
+            ->post(route('logout'))
+            ->assertRedirect('/admin');
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSee('name="robots" content="noindex,nofollow"', false)
+            ->assertSee('admin-photo-surface', false)
+            ->assertSee('mddrmobg.jpg')
+            ->assertSee('action="'.route('login').'"', false);
+
+        $this->assertStringContainsString(
+            'var(--admin-login-background)',
+            file_get_contents(resource_path('css/app.css'))
+        );
+
+        $this->get('/login')->assertRedirect('/admin');
+    }
+
     public function test_login_attempts_are_limited_per_ip_and_normalized_email(): void
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {

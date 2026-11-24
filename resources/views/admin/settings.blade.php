@@ -36,6 +36,78 @@
                 </div>
             </section>
 
+            <section class="ops-card mb-5 max-w-3xl p-5 sm:p-6" aria-labelledby="command-center-location-title">
+                <div class="border-b border-slate-200 pb-4 dark:border-slate-700">
+                    <h2 id="command-center-location-title" class="text-base font-black text-slate-900 dark:text-white">Command Center Location</h2>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Set the shared map center and route origin for all workstations.</p>
+                </div>
+                <form method="POST" action="{{ route('admin.settings.command-center-location.update') }}" class="space-y-4 pt-4">
+                    @csrf
+                    <fieldset>
+                        <legend class="mb-2 text-sm font-bold text-slate-800 dark:text-slate-100">Location source</legend>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <input type="radio" name="location_mode" value="automatic" @checked(old('location_mode', $commandCenterLocation['mode']) === 'automatic') class="h-4 w-4 border-slate-300 text-blue-800 focus:ring-blue-800">
+                                <span>Automatic location</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <input type="radio" name="location_mode" value="manual" @checked(old('location_mode', $commandCenterLocation['mode']) === 'manual') class="h-4 w-4 border-slate-300 text-blue-800 focus:ring-blue-800">
+                                <span>Manual coordinates</span>
+                            </label>
+                        </div>
+                        @error('location_mode')<p class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300" role="alert">{{ $message }}</p>@enderror
+                    </fieldset>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="command-center-latitude" class="mb-1 block text-sm font-bold text-slate-800 dark:text-slate-100">Latitude</label>
+                            <input id="command-center-latitude" name="latitude" type="number" min="-90" max="90" step="any" required value="{{ old('latitude', $commandCenterLocation['latitude']) }}" class="ops-input w-full">
+                            @error('latitude')<p class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300" role="alert">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label for="command-center-longitude" class="mb-1 block text-sm font-bold text-slate-800 dark:text-slate-100">Longitude</label>
+                            <input id="command-center-longitude" name="longitude" type="number" min="-180" max="180" step="any" required value="{{ old('longitude', $commandCenterLocation['longitude']) }}" class="ops-input w-full">
+                            @error('longitude')<p class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300" role="alert">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button id="detect-command-center-location" type="button" class="ops-btn">Detect this workstation</button>
+                        <button type="submit" class="ops-btn ops-btn-primary">Save command center location</button>
+                    </div>
+                    <p id="command-center-location-status" class="m-0 text-xs text-slate-500 dark:text-slate-400" role="status" aria-live="polite">Selecting automatic location asks for this workstation's location. Save to apply the detected coordinates as the shared map center.</p>
+                </form>
+            </section>
+
+            <section class="ops-card mt-5 max-w-3xl p-5 sm:p-6" aria-labelledby="command-center-logo-title">
+                <div class="border-b border-slate-200 pb-4 dark:border-slate-700">
+                    <h2 id="command-center-logo-title" class="text-base font-black text-slate-900 dark:text-white">Command Center Marker Logo</h2>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Upload a JPEG, PNG, or WebP image for the shared live-map marker. Maximum size: 2048 KB (2 MB). HEIC/HEIF photos must be converted first.</p>
+                </div>
+
+                @if ($hasCommandCenterLogo)
+                    <div class="flex flex-wrap items-center gap-4 border-b border-slate-200 py-4 dark:border-slate-700">
+                        <img src="{{ route('operations.live-map.command-center-logo') }}" alt="Current Command Center marker logo" class="h-20 w-20 object-contain">
+                        <form method="POST" action="{{ route('admin.settings.command-center-logo.destroy') }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="ops-btn">Use built-in SOU logo</button>
+                        </form>
+                    </div>
+                @else
+                    <p class="m-0 border-b border-slate-200 py-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">The built-in SOU logo is currently used on the live map.</p>
+                @endif
+
+                <form method="POST" action="{{ route('admin.settings.command-center-logo.store') }}" enctype="multipart/form-data" class="space-y-4 pt-4">
+                    @csrf
+                    <div>
+                        <label for="command-center-logo" class="mb-1 block text-sm font-bold text-slate-800 dark:text-slate-100">Choose marker logo</label>
+                        <input id="command-center-logo" name="command_center_logo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required aria-describedby="command-center-logo-help" class="block w-full text-sm text-slate-700 file:mr-3 file:min-h-10 file:rounded-md file:border-0 file:bg-blue-800 file:px-4 file:py-2 file:font-bold file:text-white dark:text-slate-200 dark:file:bg-blue-400 dark:file:text-slate-950">
+                        <p id="command-center-logo-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">Photos over 2 MB or in unsupported formats will be rejected. Reduce the image size or convert it to JPEG, PNG, or WebP.</p>
+                        @error('command_center_logo')<p class="mt-2 text-sm font-semibold text-red-700 dark:text-red-300" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <button type="submit" class="ops-btn ops-btn-primary">Upload marker logo</button>
+                </form>
+            </section>
+
             <section class="ops-card max-w-3xl p-5 sm:p-6" aria-labelledby="alarm-settings-title">
                 <div class="border-b border-slate-200 pb-4 dark:border-slate-700">
                     <h2 id="alarm-settings-title" class="text-base font-black text-slate-900 dark:text-white">Report acceptance alarm</h2>
@@ -127,6 +199,71 @@
 @section('scripts')
     <script>
         (() => {
+            const detectLocationButton = document.getElementById('detect-command-center-location');
+            const locationStatus = document.getElementById('command-center-location-status');
+            const latitudeInput = document.getElementById('command-center-latitude');
+            const longitudeInput = document.getElementById('command-center-longitude');
+            const automaticMode = document.querySelector('input[name="location_mode"][value="automatic"]');
+            const manualMode = document.querySelector('input[name="location_mode"][value="manual"]');
+            let selectedMode = document.querySelector('input[name="location_mode"]:checked')?.value || 'manual';
+            let detectingLocation = false;
+
+            function setLocationMode(mode) {
+                automaticMode.checked = mode === 'automatic';
+                manualMode.checked = mode === 'manual';
+                selectedMode = mode;
+            }
+
+            function detectLocation(fallbackMode = selectedMode) {
+                if (detectingLocation) {
+                    return;
+                }
+
+                if (!navigator.geolocation) {
+                    locationStatus.textContent = 'Geolocation is not supported by this browser. Enter coordinates manually.';
+                    setLocationMode(fallbackMode);
+                    return;
+                }
+
+                detectingLocation = true;
+                detectLocationButton.disabled = true;
+                locationStatus.textContent = 'Detecting this workstation location…';
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        latitudeInput.value = position.coords.latitude;
+                        longitudeInput.value = position.coords.longitude;
+                        setLocationMode('automatic');
+                        locationStatus.textContent = 'Location detected. Save to apply it as the shared command center location.';
+                        detectingLocation = false;
+                        detectLocationButton.disabled = false;
+                    },
+                    (error) => {
+                        setLocationMode(fallbackMode);
+                        locationStatus.textContent = error.code === error.PERMISSION_DENIED
+                            ? 'Location permission was denied. Allow location access or enter coordinates manually.'
+                            : 'Location could not be detected. Check location availability or enter coordinates manually.';
+                        detectingLocation = false;
+                        detectLocationButton.disabled = false;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
+
+            automaticMode.addEventListener('change', () => {
+                const previousMode = selectedMode;
+                selectedMode = 'automatic';
+                detectLocation(previousMode);
+            });
+            automaticMode.addEventListener('click', () => {
+                if (selectedMode === 'automatic') {
+                    detectLocation('automatic');
+                }
+            });
+            manualMode.addEventListener('change', () => {
+                selectedMode = 'manual';
+            });
+            detectLocationButton.addEventListener('click', () => detectLocation());
+
             const toggle = document.getElementById('alarm-enabled');
             const status = document.getElementById('alarm-setting-status');
             const storageKey = 'admin-alarm-sound-enabled';

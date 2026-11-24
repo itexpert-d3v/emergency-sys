@@ -1,6 +1,8 @@
 import './bootstrap';
 import './report-form';
 import './messaging';
+import './pwa';
+import './report-draft';
 
 const themeKey = 'emergency-sys-theme';
 const root = document.documentElement;
@@ -207,3 +209,59 @@ const connectReportProgress = () => {
 };
 
 connectReportProgress();
+
+const sidebar = document.querySelector('#operations-sidebar');
+const mobileMenuToggle = document.querySelector('[data-mobile-menu-toggle]');
+const sidebarBackdrop = document.querySelector('[data-sidebar-backdrop]');
+
+const isNarrow = () => window.matchMedia('(max-width: 639px)').matches;
+
+const setMobileDrawer = (open) => {
+    if (!sidebar) return;
+    document.body.classList.toggle('mobile-menu-open', open);
+    mobileMenuToggle?.setAttribute('aria-expanded', String(open));
+    mobileMenuToggle?.setAttribute('aria-label', open ? 'Close operations navigation' : 'Open operations navigation');
+
+    if (open) {
+        const focusable = sidebar.querySelector('a, button');
+        window.requestAnimationFrame(() => focusable?.focus());
+    } else if (isNarrow()) {
+        mobileMenuToggle?.focus();
+    }
+};
+
+try {
+    localStorage.removeItem('emergency-sys-admin-sidebar');
+} catch {}
+document.body.classList.remove('sidebar-collapsed');
+
+mobileMenuToggle?.addEventListener('click', () => {
+    setMobileDrawer(!document.body.classList.contains('mobile-menu-open'));
+});
+sidebarBackdrop?.addEventListener('click', () => setMobileDrawer(false));
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && document.body.classList.contains('mobile-menu-open')) {
+        setMobileDrawer(false);
+    }
+
+    if (event.key === 'Tab' && document.body.classList.contains('mobile-menu-open') && sidebar) {
+        const focusable = [...sidebar.querySelectorAll('a[href], button:not([disabled])')]
+            .filter((element) => element.offsetParent !== null);
+        if (!focusable.length) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+});
+
+window.matchMedia('(max-width: 639px)').addEventListener('change', (event) => {
+    if (!event.matches) setMobileDrawer(false);
+});

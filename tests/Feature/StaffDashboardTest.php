@@ -55,6 +55,7 @@ class StaffDashboardTest extends TestCase
         $this->actingAs($user)
             ->get('/queue')
             ->assertOk()
+            ->assertSee('name="robots" content="noindex,nofollow"', false)
             ->assertSee('MDR-2026-100001');
     }
 

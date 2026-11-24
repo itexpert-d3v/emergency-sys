@@ -60,7 +60,16 @@
                                 <li class="flex items-center justify-between gap-3 py-3">
                                     <div>
                                         <code class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $bannedIp->ip_address }}</code>
-                                        <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">Expires {{ $bannedIp->expires_at?->diffForHumans() ?? 'soon' }}</p>
+                                        <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">
+                                            @if ($bannedIp->expires_at)
+                                                Expires {{ $bannedIp->expires_at->diffForHumans() }}
+                                            @else
+                                                Permanent ban
+                                            @endif
+                                        </p>
+                                        @if ($bannedIp->reason)
+                                            <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">{{ $bannedIp->reason }} · {{ $bannedIp->violation_count }} violations</p>
+                                        @endif
                                     </div>
                                     <form method="POST" action="{{ route('admin.ip-bans.destroy', $bannedIp) }}">
                                         @csrf

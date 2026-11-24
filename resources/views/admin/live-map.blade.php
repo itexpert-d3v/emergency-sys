@@ -14,6 +14,9 @@
         #map-wrapper:fullscreen { padding: 0; border-radius: 0; background: #18181b; }
         #map-wrapper:fullscreen #live-map { height: 100vh; border-radius: 0; }
 
+        /* Hide the default Leaflet zoom controls */
+        .leaflet-control-zoom { display: none !important; }
+
         .custom-pin { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); color: white; box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.3); animation: pin-bounce 2s infinite; border: 3px solid #fff; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; }
         .custom-pin:hover { transform: rotate(-45deg) scale(1.1); }
         .custom-pin.active { transform: rotate(-45deg) scale(1.2); box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.3), 0 8px 12px rgba(0,0,0,0.4); z-index: 1000 !important; }
@@ -45,11 +48,26 @@
         @keyframes acceptance-button { from { background-color: #b91c1c; } to { background-color: #7f1d1d; } }
         @media (prefers-reduced-motion: reduce) { .acceptance-alert, .acceptance-alert .acceptance-light, .acceptance-alert #accept-report, .custom-pin { animation: none; } }
 
+        /* ---------- Admin Location Pin ---------- */
+        .admin-location-pin {
+            width: 20px; height: 20px; background-color: #3b82f6; border: 3px solid #fff; border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4); animation: admin-pulse 2s infinite;
+        }
+        .command-center-pin {
+            display: block; width: 40px; height: 40px; object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+        }
+        @keyframes admin-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
         .leaflet-tooltip.custom-map-tooltip { background: #18181b; color: #fff; border-radius: 6px; padding: 6px 10px; border: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-weight: bold; font-size: 12px; display: flex; align-items: center; gap: 6px; }
         .leaflet-tooltip-top:before { border-top-color: #18181b; }
         .dark .leaflet-layer, .dark .leaflet-control-zoom-in, .dark .leaflet-control-zoom-out { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
 
-        .route-distance-tooltip { background: rgba(255, 255, 255, 0.95) !important; border: 1px solid #3b82f6 !important; color: #1e3a8a !important; font-weight: bold !important; font-size: 11px !important; border-radius: 6px !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important; padding: 4px 8px !important; }
+        .route-distance-tooltip { background: rgba(255, 255, 255, 0.95) !important; border: 1px solid #d4af37 !important; color: #18181b !important; font-weight: bold !important; font-size: 11px !important; border-radius: 6px !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important; padding: 4px 10px !important; }
         .route-distance-tooltip::before { display: none; }
 
         /* ---------- Map popup (Open report) ---------- */
@@ -108,10 +126,28 @@
                         <button id="reject-report" type="button" class="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700" disabled>Reject</button>
                     </div>
                 </section>
-                <button id="fullscreen-btn" class="absolute top-4 right-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Toggle Fullscreen" style="pointer-events: auto;">
-                    <svg id="expand-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                    <svg id="collapse-icon" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 14h4m0 0v4m0-4l-5 5m13-13h-4m0 0V4m0 4l5-5M4 10h4m0 0V6m0 4l-5-5m13 13h-4m0 0v4m0-4l5 5" /></svg>
-                </button>
+                
+                <!-- ALL MAP CONTROLS IN ONE RIGHT-ALIGNED COLUMN -->
+                <div id="map-controls" class="absolute top-4 right-4 z-[9999] flex flex-col gap-2" style="pointer-events: auto;">
+                    <button id="fullscreen-btn" class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Toggle Fullscreen">
+                        <svg id="expand-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                        <svg id="collapse-icon" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 14h4m0 0v4m0-4l-5 5m13-13h-4m0 0V4m0 4l5-5M4 10h4m0 0V6m0 4l-5-5m13 13h-4m0 0v4m0-4l5 5" /></svg>
+                    </button>
+                    <button id="locate-btn" class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Find my location">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </button>
+                    <button id="zoom-in-btn" class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Zoom in">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                    <button id="zoom-out-btn" class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Zoom out">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>
+                    </button>
+                    <!-- Unroute Button (hidden by default) -->
+                    <button id="unroute-btn" class="hidden flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-red-400 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Clear Route">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
                 <div id="live-map"></div>
             </div>
         </div>
@@ -122,20 +158,45 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         /* ============================== Map setup ============================== */
-        const kaliboLat = 11.7061;
-        const kaliboLng = 122.3687;
-        const kaliboBounds = L.latLngBounds([11.5800, 122.2000], [11.8300, 122.5500]);
+        const commandCenterLat = @json((float) data_get($commandCenterLocation, 'latitude', 11.7061));
+        const commandCenterLng = @json((float) data_get($commandCenterLocation, 'longitude', 122.3687));
 
-        const map = L.map('live-map', { center: [kaliboLat, kaliboLng], zoom: 14, minZoom: 12, maxBounds: kaliboBounds, maxBoundsViscosity: 1.0 });
+        const map = L.map('live-map', { 
+            center: [commandCenterLat, commandCenterLng], 
+            zoom: 14, 
+            minZoom: 12, 
+            zoomControl: false // We are using custom zoom buttons in the HTML
+        });
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+        const commandCenterLogoUrl = @json($commandCenterLogoUrl);
+        const commandCenterImage = document.createElement('img');
+        commandCenterImage.className = 'command-center-pin';
+        commandCenterImage.src = commandCenterLogoUrl;
+        commandCenterImage.alt = '';
+
+        const commandCenterIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: commandCenterImage,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+        const commandCenterMarker = L.marker([commandCenterLat, commandCenterLng], { icon: commandCenterIcon }).addTo(map);
+        commandCenterMarker.bindTooltip('Command Center', {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -12],
+            className: 'custom-map-tooltip'
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         const targetReportId = urlParams.get('report_id');
 
-        const commandCenterLat = 11.7061;
-        const commandCenterLng = 122.3687;
         let currentRouteLayer = null;
         let hasAttemptedFocus = false;
+        let adminMarker = null;
+        let adminCurrentLocation = null; // Stores the admin's GPS location
 
         // Using config() pulls from the env file directly, bypassing cache issues.
         const navigationApiKey = "{{ config('services.openrouteservice.key', env('NAVIGATION_API', '')) }}";
@@ -144,7 +205,85 @@
             console.warn("NAVIGATION_API is empty. Please add it to your .env file and run 'php artisan config:clear'.");
         }
 
+        /* ============================== Custom Map Controls ============================== */
+        // Bind the custom HTML zoom buttons to the Leaflet map instance
+        document.getElementById('zoom-in-btn').addEventListener('click', () => map.zoomIn());
+        document.getElementById('zoom-out-btn').addEventListener('click', () => map.zoomOut());
+
+        document.getElementById('locate-btn').addEventListener('click', () => {
+            const btn = document.getElementById('locate-btn');
+            const originalHtml = btn.innerHTML;
+            
+            // Show loading state
+            btn.innerHTML = '<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                btn.innerHTML = originalHtml;
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    // Store the admin's location for routing
+                    adminCurrentLocation = { lat, lng };
+
+                    // Remove old marker if it exists
+                    if (adminMarker) {
+                        map.removeLayer(adminMarker);
+                    }
+
+                    // Add the pulsing blue dot
+                    const customIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: '<div class="admin-location-pin"></div>',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+
+                    adminMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+                    adminMarker.bindTooltip("You are here", { direction: 'top', offset: [0, -10], className: 'custom-map-tooltip' });
+
+                    // Fly to location
+                    map.flyTo([lat, lng], 16, { animate: true, duration: 1 });
+                    
+                    btn.innerHTML = originalHtml;
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert("You denied the request for Geolocation. Please allow location access to use this feature.");
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            alert("Location information is unavailable. Check your device's GPS or network.");
+                            break;
+                        case error.TIMEOUT:
+                            alert("The request to get user location timed out.");
+                            break;
+                        default:
+                            alert("An unknown error occurred.");
+                            break;
+                    }
+                    btn.innerHTML = originalHtml;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
         /* ============================== Routing ============================== */
+        function clearRoute() {
+            if (currentRouteLayer) {
+                map.removeLayer(currentRouteLayer);
+                currentRouteLayer = null;
+            }
+            document.getElementById('unroute-btn').classList.add('hidden');
+            map.flyTo([commandCenterLat, commandCenterLng], 14, { animate: true, duration: 0.6 });
+        }
+
         async function drawRoute(startLat, startLng, endLat, endLng) {
             if (currentRouteLayer) map.removeLayer(currentRouteLayer);
 
@@ -173,13 +312,16 @@
                     }).addTo(map);
 
                     const distanceKm = (feature.properties.segments[0].distance / 1000).toFixed(2);
-                    const durationMins = Math.round(feature.properties.segments[0].duration / 60);
 
-                    currentRouteLayer.bindTooltip(`<b>${distanceKm} km</b> · ~${durationMins} mins`, {
+                    // Only show the distance, no ETA/time
+                    currentRouteLayer.bindTooltip(`<b>${distanceKm} km</b>`, {
                         permanent: true, direction: 'center', className: 'route-distance-tooltip'
                     }).openTooltip();
 
                     map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
+                    
+                    // Show the Unroute button
+                    document.getElementById('unroute-btn').classList.remove('hidden');
                 } else {
                     throw new Error('No route found');
                 }
@@ -207,12 +349,22 @@
             }).openTooltip();
 
             map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
+            
+            // Show the Unroute button
+            document.getElementById('unroute-btn').classList.remove('hidden');
         }
+
+        // Bind the Unroute button
+        document.getElementById('unroute-btn').addEventListener('click', clearRoute);
 
         // Used by the "Route" button inside the map popup
         window.ltRoute = (lat, lng) => {
             map.closePopup();
-            drawRoute(commandCenterLat, commandCenterLng, lat, lng);
+            // If the admin has clicked Locate Me, use their actual GPS position.
+            // Otherwise, fall back to the Command Center.
+            const startLat = adminCurrentLocation ? adminCurrentLocation.lat : commandCenterLat;
+            const startLng = adminCurrentLocation ? adminCurrentLocation.lng : commandCenterLng;
+            drawRoute(startLat, startLng, lat, lng);
         };
 
         /* ============================== Fullscreen ============================== */
@@ -251,7 +403,6 @@
         let alarmAudioContext = null;
         let alarmAudioElement = null;
         let alarmOscillators = null;
-        let alarmToneTimer = null;
         let alarmRecoveryTimer = null;
 
         function getAlarmAudioContext() {
@@ -275,47 +426,42 @@
         function startBuiltInAlarm() {
             const context = getAlarmAudioContext();
             if (!context) return;
+            
+            // Resume context if browser suspended it (autoplay policy)
             if (alarmAudioContext.state !== 'running') {
                 alarmAudioContext.resume().then(() => {
                     if (pendingAcceptReports.length && alarmSoundEnabled()) startBuiltInAlarm();
                 }).catch(() => {});
                 return;
             }
+            
+            // Prevent multiple overlapping oscillators
             if (alarmOscillators) return;
 
+            // Create the continuous tone
             const primary = alarmAudioContext.createOscillator();
             const overtone = alarmAudioContext.createOscillator();
             const gain = alarmAudioContext.createGain();
+            
             primary.type = 'square';
             overtone.type = 'sine';
-            primary.frequency.value = 880;
-            overtone.frequency.value = 1320;
-            gain.gain.value = 0.0001;
+            
+            // A slightly tense, urgent dual-tone
+            primary.frequency.value = 880; 
+            overtone.frequency.value = 1320; 
+            
+            // Set volume immediately to 0.18 (continuous sound)
+            gain.gain.value = 0.18;
+            
             primary.connect(gain);
             overtone.connect(gain);
             gain.connect(alarmAudioContext.destination);
+            
             primary.start();
             overtone.start();
+            
+            // Store references so we can stop them later
             alarmOscillators = [primary, overtone, gain];
-
-            const alarmStartedAt = alarmAudioContext.currentTime;
-            let currentStep = -1;
-            alarmToneTimer = window.setInterval(() => {
-                if (!pendingAcceptReports.length || !alarmOscillators) return;
-                const time = alarmAudioContext.currentTime;
-                const elapsed = (time - alarmStartedAt) % 2.2;
-                const step = elapsed < 0.28 ? 0 : elapsed >= 0.42 && elapsed < 0.70 ? 1 : elapsed >= 0.84 && elapsed < 1.12 ? 2 : -1;
-                if (step === currentStep) return;
-                currentStep = step;
-                if (step >= 0) {
-                    const frequency = step === 1 ? 660 : 880;
-                    primary.frequency.setTargetAtTime(frequency, time, 0.015);
-                    overtone.frequency.setTargetAtTime(frequency * 1.5, time, 0.015);
-                    gain.gain.setTargetAtTime(0.18, time, 0.015);
-                } else {
-                    gain.gain.setTargetAtTime(0.0001, time, 0.015);
-                }
-            }, 50);
         }
 
         function startAlarmSound() {
@@ -357,10 +503,6 @@
             if (alarmAudioElement) {
                 alarmAudioElement.pause();
                 alarmAudioElement.currentTime = 0;
-            }
-            if (alarmToneTimer !== null) {
-                window.clearInterval(alarmToneTimer);
-                alarmToneTimer = null;
             }
             if (alarmRecoveryTimer !== null) {
                 window.clearInterval(alarmRecoveryTimer);
@@ -416,10 +558,6 @@
         });
         window.addEventListener('pagehide', () => {
             if (alarmAudioElement) alarmAudioElement.pause();
-            if (alarmToneTimer !== null) {
-                window.clearInterval(alarmToneTimer);
-                alarmToneTimer = null;
-            }
             if (alarmOscillators) {
                 alarmOscillators.slice(0, 2).forEach(node => {
                     try { node.stop(); } catch {}

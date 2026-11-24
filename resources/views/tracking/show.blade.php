@@ -1,14 +1,20 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+@extends('layouts.public')
+
+@section('title', __('Report tracking'))
+@section('robots', 'noindex,nofollow')
+@section('body-class', 'public-surface public-ambulance-surface min-h-screen antialiased')
+@section('body-style')
+    background-image: url('{{ asset('assets/ambulance.jpg') }}');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+@endsection
+
+@push('head')
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ __('Report tracking') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="public-surface public-ambulance-surface min-h-screen bg-slate-50 text-slate-800 antialiased transition-colors duration-200 dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/ambulance.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
-    <div class="app-photo-canvas min-h-screen">
-        @include('public.navigation')
+@endpush
+
+@section('content')
         <main class="mx-auto max-w-3xl px-4 py-8">
             @php
                 $trackingUrl = url('/track?reference=' . urlencode($reference_code) . '&token=' . urlencode($tracking_token ?? ''));
@@ -30,7 +36,7 @@
                     </button>
                 </div>
 
-                <div id="report-status" class="mt-5 inline-flex rounded-full bg-amber-100 px-4 py-1.5 text-sm font-black text-amber-900 dark:bg-amber-500/15 dark:text-amber-300">{{ __(ucfirst(str_replace('_', ' ', $status ?? 'submitted'))) }}</div>
+                <x-ui.badge tone="warning" id="report-status" class="mt-5">{{ __(ucfirst(str_replace('_', ' ', $status ?? 'submitted'))) }}</x-ui.badge>
                 @if (!empty($has_photo))
                     <div class="mt-5"><p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{{ __('Attached photo') }}</p><a href="{{ route('track.photo', $tracking_token) }}" target="_blank" rel="noreferrer" class="inline-flex"><img src="{{ route('track.photo', $tracking_token) }}" alt="{{ __('Photo submitted with this report') }}" class="max-h-64 rounded-2xl object-contain shadow-sm"></a></div>
                 @endif
@@ -63,17 +69,17 @@
                          navigate to /track?body=... and wipe the token. messaging.js still handles the submit. --}}
                     <form data-message-form onsubmit="return false;" class="mt-4 space-y-3">
                         <label for="reporter-message" class="block text-sm font-bold text-slate-700 dark:text-slate-200">{{ __('Send a message to staff') }}</label>
-                        <textarea id="reporter-message" name="body" rows="3" maxlength="500" title="Send staff a follow-up or additional details about your report." required class="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-800/15 dark:border-slate-600 dark:bg-slate-800 dark:text-white" placeholder="{{ __('Type your message') }}"></textarea>
-                        <button type="submit" class="rounded-full bg-blue-800 px-4 py-2 text-sm font-bold text-white hover:bg-blue-900 disabled:opacity-60 dark:bg-blue-400 dark:text-slate-950 dark:hover:bg-blue-300">{{ __('Send message') }}</button>
+                        <x-ui.textarea id="reporter-message" name="body" rows="3" maxlength="500" title="Send staff a follow-up or additional details about your report." placeholder="{{ __('Type your message') }}" required />
+                        <x-ui.button type="submit">{{ __('Send message') }}</x-ui.button>
                     </form>
                 </article>
             </section>
 
             <a href="{{ route('landing') }}" class="mt-6 inline-flex rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:border-blue-800 hover:text-blue-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">← {{ __('Back to home') }}</a>
         </main>
-        @include('public.footer')
-    </div>
+@endsection
 
+@push('scripts')
     <script>
         document.getElementById('copy-tracking-link')?.addEventListener('click', async (e) => {
             const input = document.getElementById('tracking-link');
@@ -82,5 +88,4 @@
             e.currentTarget.textContent = @json(__('Copied!'));
         });
     </script>
-</body>
-</html>
+@endpush

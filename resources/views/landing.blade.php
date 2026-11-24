@@ -1,16 +1,16 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="UTF-8">
-    @include('partials.theme-init')
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Emergency Response Portal') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/landing-motion.js'])
-    
-</head>
-<body class="public-surface min-h-screen bg-slate-50 text-slate-800 antialiased transition-colors duration-200 dark:bg-[#18181b] dark:text-slate-100" style="background-image: url('{{ asset('assets/lgu kalibo.jpg') }}'); background-size: cover; background-position: center; background-attachment: fixed;">
+@extends('layouts.public')
+
+@section('title', __('Emergency Response Portal'))
+@section('body-class', 'public-surface public-landing-surface min-h-screen antialiased')
+@section('body-style')
+@endsection
+
+@push('head')
+    @vite(['resources/js/landing-motion.js'])
+@endpush
+
+@section('content')
     <div class="landing-theme-overlay min-h-screen">
-        @include('public.navigation')
 
         <main class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
             <section id="home" class="landing-hero scroll-mt-28" aria-labelledby="hero-heading">
@@ -29,8 +29,5 @@
 
             @include('public.recent-news', ['news' => $footerNews])
         </main>
-        @include('public.footer')
     </div>
-
-</body>
-</html>
+@endsection

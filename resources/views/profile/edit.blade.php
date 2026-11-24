@@ -27,25 +27,16 @@
                     @endif
                 </div>
                 <div class="min-w-0 text-center sm:text-left">
-                    <label for="avatar" class="ops-btn ops-btn-sm ops-btn-primary cursor-pointer">Choose profile picture</label>
+                    <label for="avatar" class="ui-button ui-button--primary cursor-pointer">Choose profile picture</label>
                     <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" class="sr-only">
                     <p class="ops-muted mt-2">JPG, PNG, or WebP. Maximum 2 MB.</p>
                     @error('avatar')<p class="mt-2 text-sm font-bold text-red-700 dark:text-red-300" role="alert">{{ $message }}</p>@enderror
                 </div>
             </div>
             <div class="grid gap-5 sm:grid-cols-2">
-                <div>
-                    <label for="username" class="mb-1 block text-sm font-bold">Username</label>
-                    <input id="username" name="username" value="{{ old('username', $user->username ?? '') }}" minlength="3" maxlength="40" pattern="[A-Za-z0-9._-]+" autocomplete="username" required class="ops-input w-full">
-                </div>
-                <div>
-                    <label for="name" class="mb-1 block text-sm font-bold">Profile name</label>
-                    <input id="name" name="name" value="{{ old('name', $user->name) }}" maxlength="120" autocomplete="name" required class="ops-input w-full">
-                </div>
-                <div class="sm:col-span-2">
-                    <label for="email" class="mb-1 block text-sm font-bold">Email address</label>
-                    <input id="email" type="email" name="email" value="{{ old('email', $user->email) }}" maxlength="255" autocomplete="email" required class="ops-input w-full">
-                </div>
+                <x-ui.field for="username" label="Username" :error="$errors->first('username')"><x-ui.input id="username" name="username" :value="$user->username ?? ''" minlength="3" maxlength="40" pattern="[A-Za-z0-9._-]+" autocomplete="username" required class="ops-input" /></x-ui.field>
+                <x-ui.field for="name" label="Profile name" :error="$errors->first('name')"><x-ui.input id="name" name="name" :value="$user->name" maxlength="120" autocomplete="name" required class="ops-input" /></x-ui.field>
+                <div class="sm:col-span-2"><x-ui.field for="email" label="Email address" :error="$errors->first('email')"><x-ui.input id="email" type="email" name="email" :value="$user->email" maxlength="255" autocomplete="email" required class="ops-input" /></x-ui.field></div>
             </div>
             <div class="mt-6 flex justify-end"><button type="submit" class="ops-btn ops-btn-primary">Save profile</button></div>
         </form>

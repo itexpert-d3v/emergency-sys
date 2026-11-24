@@ -3,454 +3,435 @@
 @section('title', 'Operations dashboard · Kalibo MDRRMO')
 
 @section('head')
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    {{-- TODO before production/PWA: `npm i chart.js`, import it in resources/js/app.js, and delete this CDN tag. --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 @endsection
 
 @section('styles')
     <style>
-        /* ------------------------------------------------------------------
-           Soft-UI (neumorphism) tokens. One surface colour; depth comes only
-           from a light and a dark shadow cast from opposite corners.
-           ------------------------------------------------------------------ */
-        :root {
-            --nm-bg: #e4e9f0;
-            --nm-hi: #ffffff;
-            --nm-lo: #b9c2d1;
-            --nm-ink: #1c2738;
-            --nm-ink-2: #46546a;
-            --nm-ink-3: #5a687d;
-            --nm-accent: #2457d6;
-            --nm-accent-ink: #ffffff;
-            --nm-sky: #0b6fa8;
-            --nm-amber: #9a5b00;
-            --nm-green: #0a7a52;
-            --nm-red: #b42323;
-            --nm-grey: #5a687d;
+        /*
+         * Dashboard LAYOUT only. Colours, cards, buttons and badges come from
+         * resources/css/app.css (ops-card, ops-btn, ops-badge, --status-*, ...).
+         * Do not define colour values here.
+         */
+        .dash-main { padding: clamp(1rem, 2.5vw, 2.25rem); font-variant-numeric: tabular-nums; }
 
-            --nm-raised: 9px 9px 20px var(--nm-lo), -9px -9px 20px var(--nm-hi);
-            --nm-raised-sm: 5px 5px 11px var(--nm-lo), -5px -5px 11px var(--nm-hi);
-            --nm-raised-xs: 3px 3px 7px var(--nm-lo), -3px -3px 7px var(--nm-hi);
-            --nm-inset: inset 6px 6px 12px var(--nm-lo), inset -6px -6px 12px var(--nm-hi);
-            --nm-inset-sm: inset 3px 3px 7px var(--nm-lo), inset -3px -3px 7px var(--nm-hi);
-        }
-        :root.dark {
-            --nm-bg: #1d2129;
-            --nm-hi: #282d38;
-            --nm-lo: #111418;
-            --nm-ink: #e9edf4;
-            --nm-ink-2: #b5bfce;
-            --nm-ink-3: #98a3b5;
-            --nm-accent: #7ea4ff;
-            --nm-accent-ink: #0f1830;
-            --nm-sky: #6cc0f0;
-            --nm-amber: #f2b24c;
-            --nm-green: #4fd1a0;
-            --nm-red: #ff8a84;
-            --nm-grey: #98a3b5;
+        .dash-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+        .dash-title { display: flex; align-items: center; margin: 0; font-size: 2rem; font-weight: 800; line-height: 1.1; }
+        .dash-sub { margin: .35rem 0 0; color: var(--text-muted); font-size: 14px; }
+
+        .dash-overview, .dash-charts { display: grid; gap: 1rem; margin-bottom: 1rem; grid-template-columns: minmax(0, 1fr); }
+        @media (min-width: 1024px) {
+            .dash-overview { grid-template-columns: 300px minmax(0, 1fr); }
+            .dash-charts { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); }
         }
 
-        body.nm-body {
-            background-color: var(--nm-bg) !important;
-            background-image: none !important;
-            color: var(--nm-ink);
-            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+        /* Resolved ring */
+        .dash-dial-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 1.5rem; text-align: center; }
+        .dash-dial { position: relative; flex: none; width: 168px; height: 168px; }
+        .dash-dial-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .dash-dial-track, .dash-dial-progress { fill: none; stroke-width: 11; }
+        .dash-dial-track { stroke: var(--surface-raised); }
+        .dash-dial-progress { stroke: var(--status-resolved); stroke-linecap: round; transition: stroke-dasharray 600ms cubic-bezier(.22, 1, .36, 1); }
+        .dash-dial-center { position: absolute; inset: 0; display: grid; place-items: center; }
+        .dash-dial-value { font-size: 2.25rem; font-weight: 800; line-height: 1; }
+        .dash-dial-value small { margin-left: 2px; color: var(--text-muted); font-size: 1rem; font-weight: 700; }
+        .dash-dial-label { margin: 0; font-size: 1rem; font-weight: 700; }
+        .dash-dial-note { margin: .25rem 0 0; color: var(--text-muted); font-size: 13px; }
+
+        /* Stat tiles */
+        .dash-stats { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+        @media (min-width: 560px) { .dash-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .dash-stat { display: flex; min-width: 0; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; }
+        .dash-stat-icon { display: grid; flex: none; width: 44px; height: 44px; place-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); }
+        .dash-stat-icon svg { width: 22px; height: 22px; }
+        .dash-stat-label { margin: 0; font-size: 14px; font-weight: 600; }
+        .dash-stat-value { margin: 2px 0 0; font-size: 2rem; font-weight: 800; line-height: 1.1; }
+        .dash-stat-value.is-critical { color: var(--status-critical); }
+        .dash-stat-note { margin: 2px 0 0; color: var(--text-muted); font-size: 13px; }
+
+        .tone-brand { color: var(--accent-text); }
+        .tone-amber { color: var(--status-in-progress); }
+        .tone-red { color: var(--status-critical); }
+        .tone-blue { color: var(--status-submitted); }
+        .tone-muted { color: var(--text-muted); }
+
+        /* Panels and charts */
+        .dash-panel { min-width: 0; padding: 1.25rem; }
+        .dash-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; }
+        .dash-panel-title { margin: 0; font-size: 1.05rem; font-weight: 800; }
+        .dash-panel-sub { margin: 2px 0 0; color: var(--text-muted); font-size: 13px; }
+        .dash-pill { flex: none; padding: .3rem .8rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-raised); font-size: 13px; font-weight: 600; }
+        .dash-chart-box { position: relative; height: 16rem; }
+        .dash-chart-empty { position: absolute; inset: 0; display: grid; place-content: center; gap: .25rem; text-align: center; pointer-events: none; }
+        .dash-chart-empty strong { font-size: 15px; }
+        .dash-chart-empty span { color: var(--text-muted); font-size: 13px; }
+
+        .dash-status { display: grid; grid-template-columns: minmax(150px, 190px) minmax(180px, 1fr); align-items: center; gap: 1.25rem; min-height: 16rem; }
+        .dash-donut { position: relative; width: 190px; height: 190px; }
+        .dash-donut-total { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+        .dash-donut-total strong { font-size: 2rem; line-height: 1; }
+        .dash-donut-total span { margin-top: 6px; color: var(--text-muted); font-size: 13px; }
+        .dash-legend { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+        .dash-legend li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 44px; align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-control); font-size: 14px; }
+        .dash-dot { width: 9px; height: 9px; border-radius: 50%; }
+        .dot-submitted { background: var(--status-submitted); }
+        .dot-in_progress { background: var(--status-in-progress); }
+        .dot-resolved { background: var(--status-resolved); }
+        .dot-closed { background: var(--status-closed); }
+        .dash-pct { color: var(--text-muted); font-size: 13px; text-align: right; }
+        @media (max-width: 639px) {
+            .dash-status { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+            .dash-legend { width: 100%; }
+            .dash-title { font-size: 1.75rem; }
         }
-        .nm-main {
-            padding: clamp(1rem, 2.5vw, 2.25rem);
-            color: var(--nm-ink);
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* Surfaces */
-        .nm-raised { background: var(--nm-bg); border-radius: 28px; box-shadow: var(--nm-raised); }
-        .nm-well   { background: var(--nm-bg); border-radius: 20px; box-shadow: var(--nm-inset); }
-
-        /* Header */
-        .nm-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
-        .nm-title { font-size: clamp(1.6rem, 2.4vw, 2.1rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-        .nm-sub { margin-top: .35rem; font-size: .9rem; color: var(--nm-ink-3); max-width: 60ch; }
-        .nm-actions { display: flex; align-items: center; gap: 1rem; }
-
-        /* Buttons: raised at rest, pressed on :active */
-        .nm-btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
-            min-height: 44px; padding: 0 1.35rem; border: 0; border-radius: 999px; cursor: pointer;
-            background: var(--nm-bg); color: var(--nm-ink); font: inherit; font-size: .875rem; font-weight: 700;
-            text-decoration: none; box-shadow: var(--nm-raised-sm);
-            transition: box-shadow .15s ease, color .15s ease;
-        }
-        .nm-btn:hover { color: var(--nm-accent); }
-        .nm-btn:active { box-shadow: var(--nm-inset-sm); }
-        .nm-btn-primary { background: var(--nm-accent); color: var(--nm-accent-ink); }
-        .nm-btn-primary:hover { color: var(--nm-accent-ink); filter: brightness(1.06); }
-        .nm-btn:focus-visible, .nm-row:focus-visible { outline: 3px solid var(--nm-accent); outline-offset: 3px; }
-
-        /* Overview: dial + stat tiles */
-        .nm-overview { display: grid; gap: 1.75rem; margin-bottom: 1.75rem; grid-template-columns: 1fr; }
-        @media (min-width: 1024px) { .nm-overview { grid-template-columns: 340px minmax(0, 1fr); } }
-
-        .nm-dial-card { padding: 1.75rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.25rem; }
-        
-        /* Chart.js Dial Container */
-        .nm-dial-chart { position: relative; width: 200px; height: 200px; display: flex; justify-content: center; align-items: center; }
-        .nm-dial-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; }
-        .nm-dial-value { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--nm-green); }
-        .nm-dial-value small { font-size: 1rem; font-weight: 700; color: var(--nm-ink-3); margin-left: 2px; }
-        
-        .nm-dial-label { font-size: 1rem; font-weight: 700; margin-top: 1rem; }
-        .nm-dial-note { margin-top: .25rem; font-size: .85rem; color: var(--nm-ink-3); }
-
-        .nm-stats { display: grid; gap: 1.75rem; grid-template-columns: 1fr; }
-        @media (min-width: 560px) { .nm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
-        .nm-stat { padding: 1.4rem 1.5rem; display: flex; align-items: center; gap: 1.1rem; }
-        .nm-stat-icon { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; box-shadow: var(--nm-inset-sm); }
-        .nm-stat-icon svg { width: 22px; height: 22px; }
-        .nm-stat-label { font-size: .85rem; font-weight: 600; color: var(--nm-ink-2); }
-        .nm-stat-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
-        .nm-stat-note { font-size: .78rem; color: var(--nm-ink-3); margin-top: 2px; }
-        .tone-ink   { color: var(--nm-accent); }
-        .tone-amber { color: var(--nm-amber); }
-        .tone-red   { color: var(--nm-red); }
-        .tone-sky   { color: var(--nm-sky); }
-
-        /* Charts */
-        .nm-charts { display: grid; gap: 1.75rem; margin-bottom: 1.75rem; grid-template-columns: 1fr; }
-        @media (min-width: 1024px) { .nm-charts { grid-template-columns: 1.35fr 1fr; } }
-        .nm-panel { padding: 1.5rem; }
-        .nm-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
-        .nm-panel-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
-        .nm-panel-sub { margin-top: 2px; font-size: .82rem; color: var(--nm-ink-3); }
-        .nm-pill { flex: none; padding: .35rem .85rem; border-radius: 999px; font-size: .78rem; font-weight: 700; color: var(--nm-ink-2); box-shadow: var(--nm-inset-sm); }
-        .nm-chart-well { position: relative; height: 17rem; padding: 1rem; }
-        .nm-chart-well canvas { position: relative; }
 
         /* Activity feed */
-        .nm-feed-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.5rem 1.5rem 1rem; }
-        .nm-feed { list-style: none; margin: 0; padding: 0 1rem 1.25rem; display: grid; gap: .6rem; }
-        .nm-row {
-            display: flex; flex-direction: column; gap: .9rem; padding: .9rem 1rem; border-radius: 20px;
-            transition: box-shadow .15s ease;
-        }
-        .nm-row:hover { box-shadow: var(--nm-inset-sm); }
-        @media (min-width: 640px) { .nm-row { flex-direction: row; align-items: center; justify-content: space-between; } }
-        .nm-row-main { display: flex; align-items: center; gap: 1rem; min-width: 0; }
-        .nm-row-icon { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; box-shadow: var(--nm-raised-xs); }
-        .nm-row-icon svg { width: 20px; height: 20px; }
-        .nm-row-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; }
-        .nm-row-cat { font-size: .92rem; font-weight: 700; }
-        .nm-row-ref { font-size: .75rem; font-weight: 600; color: var(--nm-ink-3); letter-spacing: .02em; }
-        .nm-row-loc { display: flex; align-items: center; gap: .35rem; margin-top: .2rem; font-size: .8rem; color: var(--nm-ink-3); min-width: 0; }
-        .nm-row-loc svg { width: 14px; height: 14px; flex: none; }
-        .nm-row-loc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .nm-row-meta { display: flex; align-items: center; gap: 1rem; flex: none; }
-        .nm-row-time { min-width: 6.5rem; text-align: right; font-size: .8rem; font-weight: 600; color: var(--nm-ink-2); }
-
-        /* Status badge: inset pill, with dot AND word so colour is never the only signal */
-        .nm-badge { display: inline-flex; align-items: center; gap: .45rem; padding: .35rem .85rem; border-radius: 999px; font-size: .78rem; font-weight: 700; box-shadow: var(--nm-inset-sm); white-space: nowrap; }
-        .nm-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-        .b-sky { color: var(--nm-sky); } .b-amber { color: var(--nm-amber); } .b-emerald { color: var(--nm-green); } .b-zinc { color: var(--nm-grey); }
-        .nm-empty { padding: 3rem 1rem; text-align: center; color: var(--nm-ink-3); font-size: .9rem; }
-
-        @media (prefers-reduced-motion: reduce) {
-            .nm-btn, .nm-row { transition: none; }
-        }
+        .dash-feed-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.4rem 1.4rem 1rem; }
+        .dash-feed { margin: 0; padding: 0 .5rem .75rem; list-style: none; }
+        .dash-row { display: flex; flex-direction: column; gap: .9rem; padding: .9rem; border-bottom: 1px solid var(--border); border-radius: 10px; transition: background-color 150ms ease; }
+        .dash-row:last-child { border-bottom: 0; }
+        @media (min-width: 640px) { .dash-row { flex-direction: row; align-items: center; justify-content: space-between; } }
+        .dash-row-main { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+        .dash-row-icon { display: grid; flex: none; width: 40px; height: 40px; place-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); }
+        .dash-row-icon svg { width: 20px; height: 20px; }
+        .dash-row-body { min-width: 0; }
+        .dash-row-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; }
+        .dash-row-cat { font-size: .95rem; font-weight: 700; }
+        .dash-row-ref { color: var(--text-muted); font-size: 13px; font-weight: 600; }
+        .dash-row-loc { display: flex; align-items: center; gap: .35rem; min-width: 0; margin: .2rem 0 0; color: var(--text-muted); font-size: 13px; }
+        .dash-row-loc svg { width: 14px; height: 14px; flex: none; }
+        .dash-row-loc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dash-row-meta { display: flex; flex: none; align-items: center; gap: 1rem; }
+        .dash-row-time { min-width: 7rem; color: var(--text-muted); font-size: 13px; font-weight: 600; text-align: right; }
+        .dash-empty { padding: 2.5rem 1rem; color: var(--text-muted); font-size: 14px; text-align: center; }
     </style>
 @endsection
 
-@section('body-class', 'nm-body')
-@section('main-class', 'nm-main')
+@section('main-class', 'dash-main')
 
 @section('content')
 
-            @php
-                $resolveRate = $summary['total'] > 0 ? round($summary['resolved'] / $summary['total'] * 100) : 0;
-                $inProgress  = (int) data_get($statusCounts, 'in_progress', 0);
-            @endphp
+    @php
+        $selectedMonth = $selectedMonth ?? null;
 
-            <header class="nm-head">
+        $ringRate = $summary['total'] > 0
+            ? max(0, min(100, (int) round(($summary['resolved'] / $summary['total']) * 100)))
+            : 0;
+        $inProgress = (int) data_get($statusCounts, 'in_progress', 0);
+        $trendTotal = (int) collect($reportTrend)->sum('count');
+
+        // Fixed order so the donut, the legend and the colours always line up.
+        $statusRows = collect([
+            'submitted' => 'Submitted',
+            'in_progress' => 'In progress',
+            'resolved' => 'Resolved',
+            'closed' => 'Closed',
+        ])->map(fn ($label, $key) => [
+            'key' => $key,
+            'label' => $label,
+            'count' => (int) data_get($statusCounts, $key, 0),
+        ])->values();
+        $statusTotal = (int) $statusRows->sum('count');
+    @endphp
+
+    <header class="dash-head">
+        <div>
+            <h1 class="dash-title">Command center</h1>
+            <p class="dash-sub">Live incident activity and response metrics for Kalibo MDRRMO.</p>
+        </div>
+        <a href="{{ route('admin.news.index') }}" class="ops-btn">News &amp; advisories</a>
+    </header>
+
+    {{-- Overview --}}
+    <section class="dash-overview" aria-label="Summary">
+        <div class="ops-card dash-dial-card">
+            <div class="dash-dial" role="img" aria-label="{{ $ringRate }} percent resolved: {{ number_format($summary['resolved']) }} of {{ number_format($summary['total']) }} reports">
+                <svg class="dash-dial-ring" viewBox="0 0 120 120" aria-hidden="true">
+                    <circle class="dash-dial-track" cx="60" cy="60" r="50" pathLength="100"/>
+                    <circle class="dash-dial-progress" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="{{ $ringRate }} 100" stroke-dashoffset="0"/>
+                </svg>
+                <div class="dash-dial-center" aria-hidden="true">
+                    <span class="dash-dial-value">{{ $ringRate }}<small>%</small></span>
+                </div>
+            </div>
+            <div>
+                <p class="dash-dial-label">Resolved</p>
+                <p class="dash-dial-note">{{ number_format($summary['resolved']) }} of {{ number_format($summary['total']) }} reports closed out</p>
+            </div>
+        </div>
+
+        <div class="dash-stats">
+            <div class="ops-card dash-stat">
+                <div class="dash-stat-icon tone-brand" aria-hidden="true">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
                 <div>
-                    <h1 class="nm-title">Command center</h1>
-                    <p class="nm-sub">Live incident activity and response metrics for Kalibo MDRRMO.</p>
+                    <p class="dash-stat-label">Total reports</p>
+                    <p class="dash-stat-value">{{ number_format($summary['total']) }}</p>
+                    <p class="dash-stat-note">All recorded</p>
                 </div>
-                <div class="nm-actions">
-                    <a href="{{ route('admin.news.index') }}" class="nm-btn">News &amp; advisories</a>
+            </div>
+
+            <div class="ops-card dash-stat">
+                <div class="dash-stat-icon tone-amber" aria-hidden="true">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                 </div>
-            </header>
-
-            {{-- Overview: resolution dial + stat tiles --}}
-            <section class="nm-overview" aria-label="Summary">
-                <div class="nm-raised nm-dial-card">
-                    
-                    {{-- Chart.js Doughnut dial – always visible, no hover required --}}
-                    <div class="nm-dial-chart">
-                        <canvas id="dialChart" aria-label="{{ $resolveRate }} percent of reports resolved" role="img"></canvas>
-                        <div class="nm-dial-overlay">
-                            <span class="nm-dial-value">{{ $resolveRate }}<small>%</small></span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <p class="nm-dial-label">Resolved</p>
-                        <p class="nm-dial-note">{{ number_format($summary['resolved']) }} of {{ number_format($summary['total']) }} reports closed out</p>
-                    </div>
+                <div>
+                    <p class="dash-stat-label">Open cases</p>
+                    <p class="dash-stat-value">{{ number_format($summary['open']) }}</p>
+                    <p class="dash-stat-note">Submitted or in progress</p>
                 </div>
+            </div>
 
-                <div class="nm-stats">
-                    <div class="nm-raised nm-stat">
-                        <div class="nm-stat-icon tone-ink" aria-hidden="true">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        </div>
-                        <div>
-                            <p class="nm-stat-label">Total reports</p>
-                            <p class="nm-stat-value">{{ number_format($summary['total']) }}</p>
-                            <p class="nm-stat-note">All recorded</p>
-                        </div>
-                    </div>
-
-                    <div class="nm-raised nm-stat">
-                        <div class="nm-stat-icon tone-amber" aria-hidden="true">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-                        </div>
-                        <div>
-                            <p class="nm-stat-label">Open cases</p>
-                            <p class="nm-stat-value tone-amber">{{ number_format($summary['open']) }}</p>
-                            <p class="nm-stat-note">Submitted or in progress</p>
-                        </div>
-                    </div>
-
-                    <div class="nm-raised nm-stat">
-                        <div class="nm-stat-icon tone-red" aria-hidden="true">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                        </div>
-                        <div>
-                            <p class="nm-stat-label">Critical priority</p>
-                            <p class="nm-stat-value tone-red">{{ number_format($summary['critical']) }}</p>
-                            <p class="nm-stat-note">Needs attention</p>
-                        </div>
-                    </div>
-
-                    <div class="nm-raised nm-stat">
-                        <div class="nm-stat-icon tone-sky" aria-hidden="true">
-                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                        <div>
-                            <p class="nm-stat-label">In progress</p>
-                            <p class="nm-stat-value tone-sky">{{ number_format($inProgress) }}</p>
-                            <p class="nm-stat-note">Being handled</p>
-                        </div>
-                    </div>
+            <div class="ops-card dash-stat">
+                <div class="dash-stat-icon tone-red" aria-hidden="true">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </div>
-            </section>
-
-            {{-- Charts --}}
-            <section class="nm-charts" aria-label="Charts">
-                <div class="nm-raised nm-panel">
-                    <div class="nm-panel-head">
-                        <div>
-                            <h2 class="nm-panel-title">Volume trend</h2>
-                            <p class="nm-panel-sub">Reports submitted over 7 days</p>
-                        </div>
-                        <span class="nm-pill">{{ $reportTrend->sum('count') }} reports</span>
-                    </div>
-                    <div class="nm-well nm-chart-well">
-                        <canvas id="trendChart" aria-label="Bar chart of reports per day for the last 7 days" role="img"></canvas>
-                    </div>
+                <div>
+                    <p class="dash-stat-label">Critical priority</p>
+                    <p @class(['dash-stat-value', 'is-critical' => $summary['critical'] > 0])>{{ number_format($summary['critical']) }}</p>
+                    <p class="dash-stat-note">Needs attention</p>
                 </div>
+            </div>
 
-                <div class="nm-raised nm-panel">
-                    <div class="nm-panel-head">
-                        <div>
-                            <h2 class="nm-panel-title">Status breakdown</h2>
-                            <p class="nm-panel-sub">Current records by state</p>
-                        </div>
+            <div class="ops-card dash-stat">
+                <div class="dash-stat-icon tone-blue" aria-hidden="true">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <p class="dash-stat-label">In progress</p>
+                    <p class="dash-stat-value">{{ number_format($inProgress) }}</p>
+                    <p class="dash-stat-note">Being handled</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Charts --}}
+    <section class="dash-charts" aria-label="Charts">
+        <div class="ops-card dash-panel">
+            <div class="dash-panel-head">
+                <div>
+                    <h2 class="dash-panel-title">Volume trend</h2>
+                    <p class="dash-panel-sub">{{ $selectedMonth ? 'Reports submitted in selected month' : 'Reports submitted over the last 7 days' }}</p>
+                </div>
+                <span class="dash-pill">{{ number_format($trendTotal) }} {{ str('report')->plural($trendTotal) }} in {{ $selectedMonth ? 'selected month' : '7 days' }}</span>
+            </div>
+
+            <div class="dash-chart-box">
+                <canvas id="trendChart" aria-label="Bar chart of reports per day" role="img"></canvas>
+                @if ($trendTotal === 0)
+                    <div class="dash-chart-empty" role="status">
+                        <strong>No reports {{ $selectedMonth ? 'in the selected month' : 'in the last 7 days' }}</strong>
+                        <span>New reports will appear here.</span>
                     </div>
-                    <div class="nm-well nm-chart-well">
-                        <canvas id="statusChart" aria-label="Doughnut chart of reports by status" role="img"></canvas>
+                @endif
+            </div>
+
+            <table class="sr-only">
+                <caption>Reports submitted {{ $selectedMonth ? 'in selected month' : 'over the last 7 days' }}</caption>
+                <thead><tr><th>Date</th><th>Reports</th></tr></thead>
+                <tbody>
+                    @foreach ($reportTrend as $trendDay)
+                        <tr><td>{{ $trendDay['date'] }}</td><td>{{ $trendDay['count'] }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="ops-card dash-panel">
+            <div class="dash-panel-head">
+                <div>
+                    <h2 class="dash-panel-title">Status breakdown</h2>
+                    <p class="dash-panel-sub">Current records by state</p>
+                </div>
+            </div>
+
+            <div class="dash-status">
+                <div class="dash-donut">
+                    <canvas id="statusChart" aria-label="Doughnut chart of reports by status" role="img"></canvas>
+                    <div class="dash-donut-total" aria-hidden="true">
+                        <strong>{{ number_format($statusTotal) }}</strong>
+                        <span>{{ str('report')->plural($statusTotal) }}</span>
                     </div>
                 </div>
-            </section>
 
-            {{-- Recent activity --}}
-            <section class="nm-raised" aria-label="Recent activity">
-                <div class="nm-feed-head">
-                    <div>
-                        <h2 class="nm-panel-title">Recent activity</h2>
-                        <p class="nm-panel-sub">Latest incident reports</p>
-                    </div>
-                    <a href="{{ route(auth()->user()->role === 'admin' ? 'admin.dashboard.queue' : 'operations.queue') }}" class="nm-btn nm-btn-primary">Open full queue</a>
-                </div>
-
-                <ul class="nm-feed">
-                    @forelse ($reports as $report)
-                        @php
-                            $statusClass = match($report->status) {
-                                'submitted' => 'b-sky', 'in_progress' => 'b-amber',
-                                'resolved' => 'b-emerald', 'closed' => 'b-zinc', default => 'b-zinc',
-                            };
-                        @endphp
-                        <li class="nm-row">
-                            <div class="nm-row-main">
-                                <div class="nm-row-icon" aria-hidden="true">
-                                    @if($report->priority === 'critical')
-                                        <svg class="tone-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                    @elseif($report->priority === 'high')
-                                        <svg class="tone-amber" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    @else
-                                        <svg style="color:var(--nm-ink-3)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    @endif
-                                </div>
-
-                                <div style="min-width:0">
-                                    <div class="nm-row-title">
-                                        <span class="nm-row-cat">{{ $report->category?->nameFor(app()->getLocale(), 'en') ?? 'Incident report' }}</span>
-                                        <span class="nm-row-ref">{{ $report->reference_code }}</span>
-                                    </div>
-                                    <p class="nm-row-loc">
-                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                        <span>{{ $report->location_text ?: 'Location not provided' }}</span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="nm-row-meta">
-                                <span class="nm-badge {{ $statusClass }}">{{ ucfirst(str_replace('_', ' ', $report->status ?? 'open')) }}</span>
-                                <span class="nm-row-time">{{ $report->submitted_at?->format('M j, g:i A') ?? '—' }}</span>
-                            </div>
+                <ul class="dash-legend" aria-label="Reports by status">
+                    @foreach ($statusRows as $row)
+                        <li>
+                            <span class="dash-dot dot-{{ $row['key'] }}" aria-hidden="true"></span>
+                            <span>{{ $row['label'] }}</span>
+                            <strong>{{ number_format($row['count']) }}</strong>
+                            <span class="dash-pct">{{ $statusTotal > 0 ? round($row['count'] / $statusTotal * 100) : 0 }}%</span>
                         </li>
-                    @empty
-                        <li class="nm-empty">No incident reports yet. New reports appear here as soon as they're submitted.</li>
-                    @endforelse
+                    @endforeach
                 </ul>
-            </section>
+            </div>
+        </div>
+    </section>
+
+    {{-- Recent activity --}}
+    <section class="ops-card" aria-label="Recent activity">
+        <div class="dash-feed-head">
+            <div>
+                <h2 class="dash-panel-title">Recent activity</h2>
+                <p class="dash-panel-sub">Latest incident reports</p>
+            </div>
+            <a href="{{ route(auth()->user()->role === 'admin' ? 'admin.dashboard.queue' : 'operations.queue') }}" class="ops-btn ops-btn-primary">Open full queue</a>
+        </div>
+
+        <ul class="dash-feed">
+            @forelse ($reports as $report)
+                @php
+                    $statusClass = match($report->status) {
+                        'submitted' => 'b-sky', 'in_progress' => 'b-amber',
+                        'resolved' => 'b-emerald', 'closed' => 'b-zinc', default => 'b-zinc',
+                    };
+                @endphp
+                <li class="dash-row ops-row">
+                    <div class="dash-row-main">
+                        <div class="dash-row-icon" aria-hidden="true">
+                            @if($report->priority === 'critical')
+                                <svg class="tone-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            @elseif($report->priority === 'high')
+                                <svg class="tone-amber" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            @else
+                                <svg class="tone-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            @endif
+                        </div>
+
+                        <div class="dash-row-body">
+                            <div class="dash-row-title">
+                                <span class="dash-row-cat">{{ $report->category?->nameFor(app()->getLocale(), 'en') ?? 'Incident report' }}</span>
+                                <span class="dash-row-ref">{{ $report->reference_code }}</span>
+                            </div>
+                            <p class="dash-row-loc">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <span>{{ $report->location_text ?: 'Location not provided' }}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="dash-row-meta">
+                        <span class="ops-badge {{ $statusClass }}">{{ ucfirst(str_replace('_', ' ', $report->status ?? 'open')) }}</span>
+                        <span class="dash-row-time">{{ $report->submitted_at?->format('M j, g:i A') ?? '—' }}</span>
+                    </div>
+                </li>
+            @empty
+                <li class="dash-empty">No incident reports yet. New reports appear here as soon as they're submitted.</li>
+            @endforelse
+        </ul> 
+    </section>
 
 @endsection
 
 @section('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const root = document.documentElement;
-            const css = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+            // If the CDN is blocked, the legend and the screen-reader table still carry the data.
+            if (typeof Chart === 'undefined') return;
+
+            const trend = @json($reportTrend);
+            const statusRows = @json($statusRows);
+            const today = @json(now()->toDateString()); // server date, same timezone as the trend dates
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-            const trendData  = @json($reportTrend);
-            const statusData = @json($statusCounts);
-            const resolveRate = {{ $resolveRate }};
-            const statusColors = { submitted: '--nm-sky', in_progress: '--nm-amber', resolved: '--nm-green', closed: '--nm-grey' };
+            const dayLabel = (d) => {
+                const dt = new Date(String(d.date) + 'T12:00:00');
+                if (isNaN(dt)) return d.label ?? String(d.date);
+                return new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(dt) + ' ' + dt.getDate();
+            };
 
-            const palette = () => ({
-                text: css('--nm-ink-2'),
-                grid: css('--nm-lo') + '66',
-                accent: css('--nm-accent'),
-                surface: css('--nm-bg'),
-                green: css('--nm-green'),
-                status: Object.keys(statusData).map(k => css(statusColors[k] || '--nm-red')),
-            });
+            const maxTrend = Math.max(0, ...trend.map((d) => Number(d.count) || 0));
+            const scaleMax = Math.max(5, Math.ceil(maxTrend / 5) * 5);
+            const step = scaleMax <= 5 ? 1 : Math.ceil(scaleMax / 5);
 
-            Chart.defaults.font.family = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif";
-            Chart.defaults.font.weight = 600;
-            let p = palette();
+            let charts = [];
 
-            // 1. Resolution Dial Chart – always visible, handles 0% / 100% safely
-            const dialCtx = document.getElementById('dialChart').getContext('2d');
-            const dialChart = new Chart(dialCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Resolved', 'Remaining'],
-                    datasets: [{
-                        // never pure 0 so Chart.js still draws a tiny segment
-                        data: [
-                            Math.max(resolveRate, 0.01),
-                            Math.max(100 - resolveRate, 0.01)
-                        ],
-                        backgroundColor: [p.green, p.surface],
-                        borderWidth: 0,
-                        borderRadius: 10          // rounded ends on both sides of the green arc
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '82%',
-                    animation: reduceMotion ? false : undefined,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    }
+            // Rebuilt whenever the light/dark class changes, so chart colours always follow the tokens.
+            function render() {
+                charts.forEach((c) => c.destroy());
+                charts = [];
+
+                const c = {
+                    text: css('--text-muted'),
+                    grid: css('--border'),
+                    surface: css('--surface-card'),
+                    accent: css('--accent'),
+                    submitted: css('--status-submitted'),
+                    status: {
+                        submitted: css('--status-submitted'),
+                        in_progress: css('--status-in-progress'),
+                        resolved: css('--status-resolved'),
+                        closed: css('--status-closed'),
+                    },
+                };
+
+                Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+                Chart.defaults.font.weight = 600;
+                Chart.defaults.font.size = 13;
+
+                const trendEl = document.getElementById('trendChart');
+                if (trendEl) {
+                    charts.push(new Chart(trendEl, {
+                        type: 'bar',
+                        data: {
+                            labels: trend.map(dayLabel),
+                            datasets: [{
+                                label: 'Reports',
+                                data: trend.map((d) => d.count),
+                                backgroundColor: trend.map((d) => (d.date === today ? c.accent : c.submitted)),
+                                borderRadius: 6,
+                                borderSkipped: false,
+                                maxBarThickness: 44,
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: reduceMotion ? false : undefined,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: (item) => item.formattedValue + (Number(item.raw) === 1 ? ' report' : ' reports') } },
+                            },
+                            scales: {
+                                y: { beginAtZero: true, max: scaleMax, border: { display: false }, grid: { color: c.grid }, ticks: { color: c.text, stepSize: step, precision: 0 } },
+                                x: { border: { display: false }, grid: { display: false }, ticks: { color: c.text, maxRotation: 0, autoSkip: true } },
+                            },
+                        },
+                    }));
                 }
-            });
 
-            // 2. Trend Chart
-            const trendChart = new Chart(document.getElementById('trendChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: trendData.map(d => d.label),
-                    datasets: [{
-                        label: 'Reports',
-                        data: trendData.map(d => d.count),
-                        backgroundColor: p.accent,
-                        borderRadius: 10,
-                        borderSkipped: false,
-                        barPercentage: 0.55
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: reduceMotion ? false : undefined,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, border: { display: false }, grid: { color: p.grid }, ticks: { color: p.text, stepSize: 1 } },
-                        x: { border: { display: false }, grid: { display: false }, ticks: { color: p.text } }
-                    }
+                const statusEl = document.getElementById('statusChart');
+                if (statusEl) {
+                    const hasData = statusRows.some((r) => r.count > 0);
+                    charts.push(new Chart(statusEl, {
+                        type: 'doughnut',
+                        data: {
+                            labels: hasData ? statusRows.map((r) => r.label) : ['No reports'],
+                            datasets: [{
+                                data: hasData ? statusRows.map((r) => r.count) : [1],
+                                backgroundColor: hasData ? statusRows.map((r) => c.status[r.key]) : [c.grid],
+                                borderWidth: 3,
+                                borderColor: c.surface,
+                                borderRadius: 4,
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: reduceMotion ? false : undefined,
+                            cutout: '72%',
+                            plugins: { legend: { display: false }, tooltip: { enabled: hasData } },
+                        },
+                    }));
                 }
-            });
+            }
 
-            // 3. Status Chart
-            const statusChart = new Chart(document.getElementById('statusChart').getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(statusData).map(k => k.replace('_', ' ').replace(/^./, c => c.toUpperCase())),
-                    datasets: [{
-                        data: Object.values(statusData),
-                        backgroundColor: p.status,
-                        borderWidth: 5,
-                        borderColor: p.surface,
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: reduceMotion ? false : undefined,
-                    cutout: '68%',
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: p.text, usePointStyle: true, boxWidth: 8, padding: 14 } }
-                    }
-                }
-            });
-
-            // Re-colour charts when theme flips
-            new MutationObserver(() => {
-                p = palette();
-                
-                dialChart.data.datasets[0].backgroundColor = [p.green, p.surface];
-                dialChart.update('none');
-
-                trendChart.data.datasets[0].backgroundColor = p.accent;
-                trendChart.options.scales.y.grid.color = p.grid;
-                trendChart.options.scales.y.ticks.color = p.text;
-                trendChart.options.scales.x.ticks.color = p.text;
-                trendChart.update('none');
-
-                statusChart.data.datasets[0].backgroundColor = p.status;
-                statusChart.data.datasets[0].borderColor = p.surface;
-                statusChart.options.plugins.legend.labels.color = p.text;
-                statusChart.update('none');
-            }).observe(root, { attributes: true, attributeFilter: ['class'] });
+            render();
+            new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         });
     </script>
 @endsection

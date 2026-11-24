@@ -148,6 +148,7 @@ if (form) {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.tracking_url) {
+        window.dispatchEvent(new CustomEvent('emergency-report-confirmed'));
         window.location.href = data.tracking_url;
         return; // keep the button disabled while navigating
       }

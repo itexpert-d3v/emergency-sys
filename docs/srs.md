@@ -346,9 +346,24 @@ Every requirement has an identifier, priority, description, and completion defin
 
 ### 4.6 Staff dashboard
 
-**FR-STF-1** (M): Staff must sign in; roles `staff` and `admin` must be enforced server-side on every route, action, and file.
+#### Role-based access control
 
-- **Completion:** An authorization matrix test denies every unauthorized combination and permits every authorized one; no client-only gating exists.
+All operational users must sign in. Authorization is enforced on the server for routes and actions; hiding a control in the interface is not authorization. The `admin` role includes the core report-operating permissions of `staff` and adds system-administration and moderation privileges.
+
+| Role | Permissions |
+|---|---|
+| `staff` | Open the operations dashboard, queue, and live map; review and triage reports; exchange messages with reporters; manage own profile; participate in the news workflow. Cannot manage system users, settings, moderation, or administrative reports/exports. |
+| `admin` | All `staff` permissions, plus manage users and their `admin`/`staff` roles, configure system settings, access administrative reports and exports, and perform moderation and response-control actions such as bans, report acceptance, and responder dispatch. |
+| `mdrrmo_officer` | Additional application role currently accepted at sign-in and authorized for the news workflow. Not a substitute for `staff` or `admin` access to report operations or system administration. |
+| `information_officer` | Additional application role currently accepted at sign-in and authorized for the news workflow. Not a substitute for `staff` or `admin` access to report operations or system administration. |
+
+The role names and permissions above are server-side authorization categories, not a hierarchy that grants access merely because a role name contains “officer.” User administration currently permits creating and assigning only `admin` and `staff` accounts. The additional news roles require an explicit account setup path before operational use.
+
+**Implementation alignment (2026-11-20):** The current routes enforce the shared `staff`/`admin` report-operation access and restrict user management, settings, moderation, and administrative reporting to `admin`. Feature tests verify staff denial for several admin-only routes and self-profile role protection, but do not yet constitute the complete cross-role authorization matrix required below. The news routes also explicitly permit `mdrrmo_officer` and `information_officer`; these roles are not represented in the original two-role requirement and should be retained only if they are intended product roles. The SRS's settings scope and audit requirements are broader than the currently exposed settings and audit routes; see FR-STF-9 and FR-ADM-1 below.
+
+**FR-STF-1** (M): Staff and administrators must sign in. Both roles may access core report operations; administrator-only routes and actions must be separately restricted to `admin`. Every protected route, action, and file must be authorized server-side, with no client-only gating.
+
+- **Completion:** Authorization tests cover each role against shared operations, admin-only operations, and role-specific news access; unauthorized combinations are denied and authorized combinations succeed. No client-only gating exists.
 
 **FR-STF-2** (M): The queue must show reference code, category, priority, location, submitted time, and status, with search, filters (status, category, priority, date range), and pagination.
 
@@ -378,9 +393,11 @@ Every requirement has an identifier, priority, description, and completion defin
 
 - **Completion:** Counts match a hand-verified fixture set.
 
-**FR-STF-9** (M): Admin settings must allow management of categories, public status messages, notification channels, languages, and staff accounts and roles.
+**FR-STF-9** (M): Administrators must be able to manage categories, public status messages, notification channels, languages, system settings, and staff accounts and roles. Staff may use the operational dashboard but cannot change these system-wide settings or manage accounts.
 
 - **Completion:** Each change is possible in the UI, persisted, and audited.
+
+- **Implementation comparison:** Current admin routes expose report-intake settings, command-center location/logo, and alarm audio, plus user management. Category, public status-message, notification-channel, and language management are not represented by the current admin settings routes, so this requirement is not fully met by the routes currently in place.
 
 ### 4.7 Notifications
 
@@ -525,6 +542,8 @@ Every requirement has an identifier, priority, description, and completion defin
 **FR-ADM-1** (M): Administrators must be able to search and export the audit log; nobody may edit it.
 
 - **Completion:** Search and export work; edit and delete are impossible via the application.
+
+- **Implementation comparison:** The current web routes do not expose an admin audit search/export endpoint; this remains an SRS requirement rather than an implemented route.
 
 **FR-ADM-2** (M): Staff account and permission changes must be audited.
 

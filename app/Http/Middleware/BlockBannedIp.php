@@ -20,6 +20,10 @@ class BlockBannedIp
             $ban = BannedIp::query()->active()->where('ip_address', $normalizedIp)->first();
 
             if ($ban) {
+                if ($ban->expires_at === null) {
+                    abort(403, 'Report submissions are not available from this IP address.');
+                }
+
                 if (! RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
                     RateLimiter::hit($rateLimitKey, max(1, now()->diffInSeconds($ban->expires_at)));
                 }

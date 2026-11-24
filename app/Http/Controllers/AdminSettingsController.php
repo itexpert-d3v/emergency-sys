@@ -15,9 +15,16 @@ class AdminSettingsController extends Controller
     public function index(): View
     {
         $audioPath = Setting::get('admin.alarm_audio_path');
+        $commandCenterLogoPath = Setting::get('admin.command_center_logo_path');
 
         return view('admin.settings', [
             'hasAlarmAudio' => is_string($audioPath) && Storage::disk('local')->exists($audioPath),
+            'hasCommandCenterLogo' => is_string($commandCenterLogoPath) && Storage::disk('local')->exists($commandCenterLogoPath),
+            'commandCenterLocation' => Setting::get('admin.command_center_location', [
+                'mode' => 'manual',
+                'latitude' => 11.7061,
+                'longitude' => 122.3687,
+            ]),
             'reportSettings' => [
                 'description_min_length' => Setting::get('report.description_min_length', 20),
                 'description_max_length' => Setting::get('report.description_max_length', 2000),
@@ -41,6 +48,74 @@ class AdminSettingsController extends Controller
         }
 
         return redirect()->route('admin.settings')->with('status', 'Report intake settings saved.');
+    }
+
+    public function updateCommandCenterLocation(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'location_mode' => ['required', 'in:automatic,manual'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        Setting::put('admin.command_center_location', [
+            'mode' => $data['location_mode'],
+            'latitude' => (float) $data['latitude'],
+            'longitude' => (float) $data['longitude'],
+        ]);
+
+        return redirect()->route('admin.settings')->with('status', 'Command center location saved.');
+    }
+
+    public function storeCommandCenterLogo(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'command_center_logo' => ['required', 'image', 'mimes:jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
+        ], [
+            'command_center_logo.image' => 'Choose a valid image file.',
+            'command_center_logo.mimes' => 'Use a JPEG, PNG, or WebP image. HEIC/HEIF photos are not supported; export or convert them first.',
+            'command_center_logo.extensions' => 'Use a .jpg, .jpeg, .png, or .webp image.',
+            'command_center_logo.max' => 'The image must be 2048 KB (2 MB) or smaller.',
+        ]);
+
+        $disk = Storage::disk('local');
+        $previousPath = Setting::get('admin.command_center_logo_path');
+        $path = $disk->putFile('admin/command-center', $request->file('command_center_logo'));
+
+        if (! $path) {
+            throw ValidationException::withMessages(['command_center_logo' => 'The Command Center logo could not be stored.']);
+        }
+
+        Setting::put('admin.command_center_logo_path', $path);
+
+        if (is_string($previousPath) && $previousPath !== $path) {
+            $disk->delete($previousPath);
+        }
+
+        return redirect()->route('admin.settings')->with('status', 'Command Center logo uploaded.');
+    }
+
+    public function commandCenterLogo(): BinaryFileResponse
+    {
+        $path = Setting::get('admin.command_center_logo_path');
+        abort_unless(is_string($path) && Storage::disk('local')->exists($path), 404);
+
+        return response()->file(Storage::disk('local')->path($path), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function removeCommandCenterLogo(): RedirectResponse
+    {
+        $path = Setting::get('admin.command_center_logo_path');
+        if (is_string($path)) {
+            Storage::disk('local')->delete($path);
+        }
+        Setting::query()->whereKey('admin.command_center_logo_path')->delete();
+        Setting::forget('admin.command_center_logo_path');
+
+        return redirect()->route('admin.settings')->with('status', 'Custom Command Center logo removed. The SOU logo will be used.');
     }
 
     public function storeAlarmAudio(Request $request): RedirectResponse

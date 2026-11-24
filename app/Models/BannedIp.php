@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class BannedIp extends Model
 {
@@ -13,16 +13,24 @@ class BannedIp extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'banned_at' => 'datetime',
     ];
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('expires_at', '>', now());
+        return $query->where(function (Builder $query): void {
+            $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+        });
     }
 
     public static function limiterKey(string $ipAddress): string
     {
-        return 'temporary-ip-ban:' . hash('sha256', static::normalize($ipAddress));
+        return 'temporary-ip-ban:'.hash('sha256', static::normalize($ipAddress));
+    }
+
+    public static function progressiveBanKey(string $ipAddress): string
+    {
+        return 'progressive-ip-ban:'.hash('sha256', static::normalize($ipAddress));
     }
 
     public static function normalize(string $ipAddress): string

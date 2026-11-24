@@ -1,25 +1,27 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    @include('partials.theme-init')
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Report an incident') }}</title>
-    
-    {{-- Leaflet Map CSS --}}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+@extends('layouts.public')
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
+@section('title', __('Report an incident'))
+@section('body-class', 'public-surface public-ambulance-surface min-h-screen antialiased')
+@section('body-style')
+    background-image: url('{{ asset('assets/ambulance.jpg') }}');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+@endsection
+
+@push('head')
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+@endpush
+
+@push('styles')
     <style>
         #map { height: 320px; width: 100%; border-radius: 8px; z-index: 1; }
         /* Fix for Leaflet dark mode controls */
         .dark .leaflet-layer, .dark .leaflet-control-zoom-in, .dark .leaflet-control-zoom-out { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
     </style>
-</head>
-<body class="public-surface public-ambulance-surface min-h-screen bg-slate-50 text-slate-800 antialiased transition-colors duration-200 dark:bg-[#18181b] dark:text-slate-100" style="background-image:url('{{ asset('assets/ambulance.jpg') }}');background-size:cover;background-position:center;background-attachment:fixed">
-    <div class="app-photo-canvas min-h-screen">
-        @include('public.navigation')
+@endpush
+
+@section('content')
         <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
             <header class="civic-panel mb-5 grid gap-5 rounded-[12px] p-5 dark:bg-slate-950/95 dark:shadow-black/30 lg:grid-cols-[minmax(16rem,0.7fr)_minmax(0,1.3fr)] lg:items-center">
                 <div>
@@ -66,7 +68,7 @@
                         
                         <div>
                             <label for="description" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('What happened?') }}</label>
-                            <textarea id="description" name="description" rows="6" minlength="20" maxlength="2000" title="Describe what happened, what is affected, and any immediate danger. At least 20 characters." class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-900/60" placeholder="{{ __('Describe what happened, who or what is affected, and the help needed.') }}" required>{{ old('description') }}</textarea>
+                            <x-ui.textarea id="description" name="description" rows="6" minlength="20" maxlength="2000" title="Describe what happened, what is affected, and where it occurred. At least 20 characters." placeholder="{{ __('Describe what happened, who or what is affected, and the help needed.') }}" required />
                             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('Include the facts that help the team understand the situation quickly.') }}</p>
                         </div>
                     </fieldset>
@@ -76,11 +78,11 @@
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <label for="reporter_name" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Reporter name') }}</label>
-                                <input id="reporter_name" name="reporter_name" type="text" pattern="[\p{L}\p{M}]+([ .'-]+[\p{L}\p{M}]+)*\.?" title="Use letters only, with spaces, hyphens, apostrophes, or periods as separators." class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-900/60" placeholder="{{ __('Full name') }}" value="{{ old('reporter_name') }}" required>
+                                <x-ui.input id="reporter_name" name="reporter_name" type="text" pattern="[\p{L}\p{M}]+([ .'-]+[\p{L}\p{M}]+)*\.?" title="Use letters only, with spaces, hyphens, apostrophes, or periods as separators." placeholder="{{ __('Full name') }}" required />
                             </div>
                             <div>
                                 <label for="contact_number" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Contact number') }}</label>
-                                <input id="contact_number" name="contact_number" type="tel" pattern="\+63[0-9]{10,12}" title="Enter a Philippine phone number starting with +63, for example +639171234567." class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-900/60" placeholder="{{ __('+63...') }}" value="{{ old('contact_number') }}" required>
+                                <x-ui.input id="contact_number" name="contact_number" type="tel" pattern="\+63[0-9]{10,12}" title="Enter a Philippine phone number starting with +63, for example +639171234567." placeholder="{{ __('+63...') }}" required />
                             </div>
                         </div>
 
@@ -153,17 +155,16 @@
                     </fieldset>
 
                     <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
-                        <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-[4px] bg-blue-800 px-6 py-3 text-sm font-black text-white transition hover:bg-blue-900 dark:bg-blue-400 dark:text-slate-950 dark:hover:bg-blue-300">{{ __('Submit a report') }}</button>
+                        <x-ui.button type="submit">{{ __('Submit a report') }}</x-ui.button>
                         <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Your information is only used to respond to this report.') }}</p>
                     </div>
                 </form>
             </main>
         </div>
         @include('public.report-flow')
-        @include('public.footer')
-    </div>
+@endsection
 
-    {{-- Leaflet JS --}}
+@push('scripts')
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <script>
@@ -329,5 +330,4 @@
             }
         });
     </script>
-</body>
-</html>
+@endpush

@@ -12,7 +12,7 @@ A mobile-friendly, account-free web app where residents report emergencies to th
 
 Residents report accidents and emergencies to the MDRRMO without an account, through a guided chat that collects structured fields. They get a reference code and a private tracking link that works for seven days. Staff triage reports in a protected dashboard and are notified the moment a report arrives.
 
-This system supports MDRRMO intake, response coordination, and private tracking. It is not a replacement for the emergency hotline, and a submitted report is never proof that responders were dispatched. Only an authorized administrator's recorded dispatch confirmation may tell a reporter that an ambulance or response group is on the way. Every public screen must tell people in immediate danger to call the local emergency hotline first.
+This system supports MDRRMO intake, response coordination, and private tracking. It is not a replacement for the emergency hotline, and a submitted report is never proof that responders were dispatched. Only an authorized administrator's recorded dispatch confirmation may tell a reporter that an ambulance or response group is on the way.
 
 ---
 

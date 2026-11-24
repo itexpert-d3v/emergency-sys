@@ -2,7 +2,7 @@
 <nav class="operations-nav" aria-label="Operations navigation">
     @if (in_array($role, ['admin', 'staff'], true))
         <p class="operations-nav-label sidebar-label w-auto opacity-100 overflow-hidden whitespace-nowrap transition-all duration-200">Operations</p>
-        <a href="{{ route('operations.dashboard') }}" @class(['is-active' => request()->routeIs('operations.dashboard')]) title="Dashboard" aria-label="Dashboard" data-tooltip="Dashboard">
+        <a href="{{ route('operations.dashboard') }}" @class(['is-active' => request()->routeIs('operations.dashboard')]) @if(request()->routeIs('operations.dashboard')) aria-current="page" @endif title="Dashboard" aria-label="Dashboard" data-tooltip="Dashboard">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>
             <span class="sidebar-link-label w-auto opacity-100 overflow-hidden whitespace-nowrap transition-all duration-200">Dashboard</span>
         </a>
