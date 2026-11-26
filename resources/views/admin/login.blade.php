@@ -182,36 +182,6 @@
             transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
         }
 
-        /* --- LOADING STATE --- */
-        .is-loading .btn-text {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .is-loading .btn-arrow {
-            animation: shootArrow 0.8s cubic-bezier(0.5, 0, 0.9, 1) forwards;
-        }
-
-        .is-loading {
-            pointer-events: none;
-            box-shadow: var(--nm-inset-sm) !important;
-        }
-
-        @keyframes shootArrow {
-            0% {
-                transform: translateX(0) scale(1);
-                opacity: 1;
-            }
-            30% {
-                transform: translateX(5px) scale(1);
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(150px) scale(1.5);
-                opacity: 0;
-            }
-        }
-
         /* Back Button (Icon only) */
         .nm-icon-btn {
             display: grid;
@@ -233,129 +203,64 @@
             box-shadow: var(--nm-inset-sm);
             transform: scale(0.95);
         }
-
-        /* Error Alert */
-        .nm-alert {
-            background: var(--nm-bg);
-            color: var(--nm-red);
-            border-radius: 12px;
-            padding: 1rem;
-            font-size: 0.875rem;
-            box-shadow: var(--nm-inset-sm);
-            margin-bottom: 1.5rem;
-            border-left: 3px solid var(--nm-red);
-        }
-
-        /* ------------------------------------------------------------------
-           Shake Animation for Incorrect Login
-           ------------------------------------------------------------------ */
-        @keyframes shakeCard {
-            0%, 100% { transform: translateX(0); }
-            15% { transform: translateX(-8px); }
-            30% { transform: translateX(8px); }
-            45% { transform: translateX(-6px); }
-            60% { transform: translateX(6px); }
-            75% { transform: translateX(-3px); }
-            90% { transform: translateX(3px); }
-        }
-
-        .shake-card {
-            animation: shakeCard 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-        }
-
-        /* Branding text contrast in synchronized dark mode */
-        :root.dark .nm-brand-panel h1 { color: var(--nm-ink); }
-        :root.dark .nm-brand-panel p { color: var(--nm-ink-2); }
     </style>
 @endpush
 
 @section('content')
     <div class="login-canvas">
         <div class="nm-card" id="login-card">
-            
-            {{-- Left Panel: Branding --}}
             <div class="nm-brand-panel">
                 <div>
                     <div class="flex items-center gap-4 mb-8">
                         <img class="h-12 w-12 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]" src="{{ asset('assets/sou.png') }}" alt="SOU">
                         <img class="h-12 w-12 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]" src="{{ asset('assets/kalibo-logo.png') }}" alt="Kalibo">
                     </div>
-                    
                     <h1 class="text-4xl font-black tracking-tight mb-4" style="color: var(--nm-ink);">Operations<br>Command Center</h1>
-                    <p class="text-sm leading-relaxed max-w-sm" style="color: var(--nm-ink-2);">
-                        A secure terminal for reviewing incident reports, deploying response units, and managing municipal communications.
-                    </p>
+                    <p class="text-sm leading-relaxed max-w-sm" style="color: var(--nm-ink-2);">A secure terminal for reviewing incident reports, deploying response units, and managing municipal communications.</p>
                 </div>
-                
                 <div class="mt-12 pt-6" style="border-top: 1px solid var(--nm-lo);">
                     <p class="text-xs font-bold uppercase tracking-wider mb-1" style="color: var(--nm-ink);">Restricted Access</p>
                     <p class="text-xs leading-relaxed" style="color: var(--nm-ink-3);">Authentication is required. Unauthorized attempts are logged and monitored by MDRRMO security.</p>
                 </div>
             </div>
 
-            {{-- Right Panel: Form --}}
             <div class="nm-form-panel">
-                
                 <div class="flex items-center justify-between mb-8">
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-widest mb-1" style="color: var(--nm-accent);">Identity Verification</p>
                         <h2 class="text-2xl font-black" style="color: var(--nm-ink);">Sign in</h2>
                     </div>
-                    {{-- Back to home icon button --}}
                     <a href="{{ route('landing') }}" title="Back to home" class="nm-icon-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6M9 12h11"/></svg>
                     </a>
                 </div>
 
-                @if ($errors->any())
-                    <div class="nm-alert" id="error-alert">
-                        {{ $errors->first() }}
-                    </div>
-                @endif
+                <x-feedback.flash position="inline" />
 
                 <form method="POST" action="{{ route('login') }}" id="login-form" class="space-y-5">
                     @csrf
-                    
                     <div>
                         <label for="email" class="mb-2 block text-xs font-bold uppercase tracking-wide" style="color: var(--nm-ink-2);">Account Email</label>
                         <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="admin@kalibo.gov.ph" required autofocus class="nm-input">
                     </div>
-
                     <div>
                         <label for="password" class="mb-2 block text-xs font-bold uppercase tracking-wide" style="color: var(--nm-ink-2);">Password</label>
                         <input id="password" name="password" type="password" placeholder="••••••••••••" required class="nm-input">
                     </div>
-
-                    <button type="submit" id="login-btn" class="nm-btn-primary mt-6">
+                    <button type="submit" id="login-btn" data-shake-target class="nm-btn-primary mt-6">
                         <div class="btn-content">
                             <span class="btn-text">Authenticate</span>
-                            <svg class="btn-arrow h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                            </svg>
+                            <svg class="btn-arrow h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </div>
                     </button>
                 </form>
             </div>
-            
         </div>
     </div>
 
     <script>
         document.getElementById('login-form').addEventListener('submit', function() {
-            // Add the loading class to trigger the CSS animations
             document.getElementById('login-btn').classList.add('is-loading');
         });
-
-        // Shake effect on error
-        @if ($errors->any())
-            document.addEventListener('DOMContentLoaded', function() {
-                const card = document.getElementById('login-card');
-                card.classList.add('shake-card');
-                // Remove the class after animation ends so it can be re-triggered
-                card.addEventListener('animationend', function() {
-                    card.classList.remove('shake-card');
-                }, { once: true });
-            });
-        @endif
     </script>
 @endsection

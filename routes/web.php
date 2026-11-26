@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminRoutingController;
 use App\Http\Controllers\AdminNewsController;
 use App\Http\Controllers\AdminModerationController;
 use App\Http\Controllers\AdminSettingsController;
@@ -135,12 +136,16 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:staff,admin', 'throttle:staff-read'])->group(function () {
         Route::get('/queue', [StaffDashboardController::class, 'index'])->name('operations.queue');
         Route::get('/queue/poll', [StaffDashboardController::class, 'poll'])->name('operations.queue.poll');
-        Route::get('/reports/{report}/messages', [ReportMessageController::class, 'staffIndex'])->name('operations.report.messages');
+        Route::get('/reports/{report}/messages', [ReportMessageController::class, 'staffIndex'])
+            ->middleware('throttle:staff-message-read')
+            ->name('operations.report.messages');
         Route::get('/reports/{report}/photo', [ReportPhotoController::class, 'forStaff'])->name('operations.report.photo');
     });
     Route::middleware(['role:staff,admin', 'throttle:staff-write'])->group(function () {
         Route::post('/reports/{report}/triage', [StaffDashboardController::class, 'triage'])->name('operations.report.triage');
-        Route::post('/reports/{report}/messages', [ReportMessageController::class, 'staffStore'])->name('operations.report.messages.store');
+        Route::post('/reports/{report}/messages', [ReportMessageController::class, 'staffStore'])
+            ->middleware('throttle:staff-message')
+            ->name('operations.report.messages.store');
     });
 
     Route::middleware(['role:admin,staff,mdrrmo_officer,information_officer', 'throttle:staff-read'])->group(function () {
@@ -155,27 +160,36 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/admin/news/{post}/unarchive', [AdminNewsController::class, 'unarchive'])->name('admin.news.unarchive');
     });
 
-    Route::middleware(['role:admin,staff', 'throttle:staff-read'])->group(function () {
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('operations.dashboard');
-        Route::get('/live-map/alarm-audio', [AdminSettingsController::class, 'alarmAudio'])->name('operations.live-map.alarm-audio');
-        Route::get('/live-map/command-center-logo', [AdminSettingsController::class, 'commandCenterLogo'])->name('operations.live-map.command-center-logo');
-        Route::get('/live-map', function () {
-            $logoPath = Setting::get('admin.command_center_logo_path');
+    Route::middleware('role:admin,staff')->group(function () {
+        Route::middleware('throttle:staff-read')->group(function () {
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('operations.dashboard');
+            Route::get('/live-map/alarm-audio', [AdminSettingsController::class, 'alarmAudio'])->name('operations.live-map.alarm-audio');
+            Route::get('/live-map/command-center-logo', [AdminSettingsController::class, 'commandCenterLogo'])->name('operations.live-map.command-center-logo');
+            Route::get('/live-map', function () {
+                $logoPath = Setting::get('admin.command_center_logo_path');
 
-            return view('admin.live-map', [
-                'alarmAudioUrl' => Setting::get('admin.alarm_audio_path') ? route('operations.live-map.alarm-audio') : null,
-                'commandCenterLogoUrl' => is_string($logoPath) && Storage::disk('local')->exists($logoPath)
-                    ? route('operations.live-map.command-center-logo')
-                    : asset('assets/sou.png'),
-                'commandCenterLocation' => Setting::get('admin.command_center_location', [
-                    'mode' => 'manual',
-                    'latitude' => 11.7061,
-                    'longitude' => 122.3687,
-                ]),
-                'queueUrl' => auth()->user()->role === 'admin' ? route('admin.dashboard.queue') : route('operations.queue'),
-            ]);
-        })->name('operations.live-map');
-        Route::get('/live-map/data', [AdminDashboardController::class, 'liveMap'])->name('operations.live-map.data');
+                return view('admin.live-map', [
+                    'alarmAudioUrl' => Setting::get('admin.alarm_audio_path') ? route('operations.live-map.alarm-audio') : null,
+                    'commandCenterLogoUrl' => is_string($logoPath) && Storage::disk('local')->exists($logoPath)
+                        ? route('operations.live-map.command-center-logo')
+                        : asset('assets/sou.png'),
+                    'commandCenterLocation' => Setting::get('admin.command_center_location', [
+                        'mode' => 'manual',
+                        'latitude' => 11.7061,
+                        'longitude' => 122.3687,
+                    ]),
+                    'queueUrl' => auth()->user()->role === 'admin' ? route('admin.dashboard.queue') : route('operations.queue'),
+                ]);
+            })->name('operations.live-map');
+        });
+
+        Route::get('/admin/route', [AdminRoutingController::class, 'route'])
+            ->middleware('throttle:route-directions')
+            ->name('operations.live-map.route');
+
+        Route::get('/live-map/data', [AdminDashboardController::class, 'liveMap'])
+            ->middleware('throttle:live-map')
+            ->name('operations.live-map.data');
     });
     Route::middleware(['role:admin', 'throttle:staff-read'])->group(function () {
         Route::get('/admin/dashboard/queue', [AdminDashboardController::class, 'queue'])->name('admin.dashboard.queue');

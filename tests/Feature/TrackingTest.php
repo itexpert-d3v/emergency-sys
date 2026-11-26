@@ -13,6 +13,16 @@ class TrackingTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_tracking_entry_page_asks_for_report_number_and_private_code(): void
+    {
+        $this->get('/track')
+            ->assertOk()
+            ->assertSee('name="robots" content="noindex,nofollow"', false)
+            ->assertSee('name="reference"', false)
+            ->assertSee('name="token"', false)
+            ->assertSee('The report number alone cannot open a report.');
+    }
+
     public function test_reference_without_token_is_rejected(): void
     {
         $report = $this->createReport();

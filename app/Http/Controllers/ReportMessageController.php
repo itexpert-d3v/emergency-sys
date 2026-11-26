@@ -35,7 +35,7 @@ class ReportMessageController extends Controller
     public function reporterStore(Request $request, string $token): JsonResponse
     {
         $data = $request->validate([
-            'body' => ['required', 'string', 'max:500'],
+            'body' => ['required', 'string', 'max:50'],
         ]);
 
         $report = $this->resolveReportForToken($token);
@@ -47,9 +47,17 @@ class ReportMessageController extends Controller
             return response()->json(['error' => 'This thread is closed.'], 403);
         }
 
+        $clean = $this->sanitizeMessage($data['body']);
+        if ($clean === '') {
+            return response()->json([
+                'error' => 'Please write a message before sending.',
+                'errors' => ['body' => ['Please write a message before sending.']],
+            ], 422);
+        }
+
         $message = $report->messages()->create([
             'sender_type' => 'reporter',
-            'body' => strip_tags($data['body']),
+            'body' => $clean,
             'staff_actor_id' => null,
             'closed_thread' => false,
         ]);
@@ -86,7 +94,7 @@ class ReportMessageController extends Controller
         $request->merge(['close_thread' => $request->boolean('close_thread')]);
 
         $data = $request->validate([
-            'body' => ['required', 'string', 'max:500'],
+            'body' => ['required', 'string', 'max:50'],
             'close_thread' => ['sometimes', 'boolean'],
         ]);
 
@@ -94,11 +102,19 @@ class ReportMessageController extends Controller
             return response()->json(['error' => 'This thread is closed.'], 403);
         }
 
+        $clean = $this->sanitizeMessage($data['body']);
+        if ($clean === '') {
+            return response()->json([
+                'error' => 'Please write a message before sending.',
+                'errors' => ['body' => ['Please write a message before sending.']],
+            ], 422);
+        }
+
         $closeThread = (bool) ($data['close_thread'] ?? false);
 
         $message = $report->messages()->create([
             'sender_type' => 'staff',
-            'body' => strip_tags($data['body']),
+            'body' => $clean,
             'staff_actor_id' => $request->user()?->id,
             'closed_thread' => $closeThread,
         ]);
@@ -133,5 +149,34 @@ class ReportMessageController extends Controller
         }
 
         return $trackingToken->report()->first();
+    }
+
+    /**
+     * Strip HTML, control characters, and excess whitespace, then hard-cap
+     * the result at 50 characters. Returns an empty string if nothing usable
+     * remains (caller should reject with a 422).
+     */
+    protected function sanitizeMessage(string $raw): string
+    {
+        // 1. Strip HTML tags (including any embedded script/style content).
+        $text = strip_tags($raw);
+
+        // 2. Remove control chars and zero-width characters (incl. ZWSP, ZWJ, BOM).
+        $text = preg_replace('/[\x00-\x1F\x7F\x{200B}-\x{200F}\x{202A}-\x{202E}\x{FEFF}]/u', '', $text);
+
+        // 3. Collapse runs of whitespace into a single space.
+        $text = preg_replace('/\s+/u', ' ', $text);
+
+        // 4. Trim ends.
+        $text = trim($text);
+
+        // 5. Hard cap at 50 characters (multibyte-safe).
+        if (function_exists('mb_substr')) {
+            $text = mb_substr($text, 0, 50, 'UTF-8');
+        } else {
+            $text = substr($text, 0, 50);
+        }
+
+        return $text;
     }
 }

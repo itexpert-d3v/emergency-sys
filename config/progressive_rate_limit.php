@@ -9,7 +9,7 @@ $enabled = $enabledOverride === null || $enabledOverride === ''
 
 return [
     'enabled' => $enabled,
-    'cache_store' => env('RATE_LIMIT_CACHE_STORE', env('CACHE_STORE', 'database')),
+    'cache_store' => env('RATE_LIMIT_CACHE_STORE', env('CACHE_STORE', env('APP_ENV') === 'production' ? 'redis' : 'database')),
     'violation_ttl_seconds' => 86400,
     'permanent_violation_count' => 5,
     'temporary_bans' => [60, 300, 1800, 7200],
@@ -31,6 +31,8 @@ return [
             ['requests' => 8, 'seconds' => 60, 'dimension' => 'token'],
         ],
         'staff-read' => [['requests' => 60, 'seconds' => 60]],
+        'live-map' => [['requests' => 120, 'seconds' => 60, 'dimension' => 'user']],
+        'route-directions' => [['requests' => 30, 'seconds' => 60, 'dimension' => 'user']],
         'staff-write' => [['requests' => 30, 'seconds' => 60]],
         'admin-write' => [['requests' => 30, 'seconds' => 60]],
         'admin-sensitive' => [

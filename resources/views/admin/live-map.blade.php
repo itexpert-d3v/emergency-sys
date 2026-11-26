@@ -71,6 +71,8 @@
         .route-distance-tooltip::before { display: none; }
 
         /* ---------- Map popup (Open report) ---------- */
+        .lt-popup { --o-surface: #ffffff; --o-line: #cbd5e1; --o-ink: #0f172a; --o-ink-2: #334155; --o-ink-3: #64748b; }
+        .dark .lt-popup { --o-surface: #111827; --o-line: #475569; --o-ink: #f8fafc; --o-ink-2: #cbd5e1; --o-ink-3: #94a3b8; }
         .lt-popup .leaflet-popup-content-wrapper { padding:0; overflow:hidden; border:1px solid var(--o-line); border-radius:14px; background:var(--o-surface); color:var(--o-ink); box-shadow:0 12px 28px -6px rgba(0,0,0,.28); font-family:ui-sans-serif, system-ui, sans-serif; }
         .lt-popup .leaflet-popup-content { margin:0; line-height:1.4; }
         .lt-popup .leaflet-popup-tip { background:var(--o-surface); border:1px solid var(--o-line); }
@@ -94,8 +96,9 @@
                 <h1>Live Incident Map</h1>
                 <p>Live incident locations and pending acceptance alerts.</p>
             </div>
-            <div class="operations-head-actions relative">
-                <span id="sync-badge" title="Live connection active"><span class="sync-dot"></span> Live Sync</span>
+            <div class="operations-head-actions relative flex flex-wrap items-center gap-2">
+                <button id="alarm-sound-toggle" type="button" aria-pressed="true" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Alarm sound: On</button>
+                <span id="sync-badge" title="Polling for updates"><span class="sync-dot"></span> Polling</span>
             </div>
         </header>
 
@@ -105,6 +108,7 @@
                     <div class="flex items-center gap-2">
                         <span class="acceptance-light h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500"></span>
                         <p id="acceptance-state" class="m-0 text-xs font-black text-slate-800 dark:text-slate-100" aria-live="assertive">All reports accepted</p>
+                        <span id="alarm-muted-indicator" class="hidden shrink-0 rounded bg-red-700 px-1.5 py-1 text-[10px] font-black tracking-wide text-white" role="status" aria-live="polite">ALARM MUTED</span>
                     </div>
                     <div id="acceptance-details" class="mt-2 hidden space-y-2 border-t border-slate-200 pt-2 text-xs dark:border-slate-700">
                         <div class="flex flex-wrap items-baseline justify-between gap-1">
@@ -127,6 +131,11 @@
                     </div>
                 </section>
                 
+                <div id="route-status" class="hidden absolute left-4 top-4 z-[10000] max-w-sm rounded-lg border border-red-300 bg-white/95 p-4 shadow-lg backdrop-blur-sm dark:border-red-700 dark:bg-slate-900/95" role="status" aria-live="polite">
+                    <p id="route-status-message" class="m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"></p>
+                    <button id="route-retry" type="button" class="mt-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800">Retry route</button>
+                </div>
+
                 <!-- ALL MAP CONTROLS IN ONE RIGHT-ALIGNED COLUMN -->
                 <div id="map-controls" class="absolute top-4 right-4 z-[9999] flex flex-col gap-2" style="pointer-events: auto;">
                     <button id="fullscreen-btn" class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-slate-700 shadow-lg backdrop-blur-md transition hover:bg-white dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600" title="Toggle Fullscreen">
@@ -154,6 +163,7 @@
 @endsection
 
 @section('scripts')
+@vite('resources/js/admin/live-map-poller.js')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -168,7 +178,12 @@
             zoomControl: false // We are using custom zoom buttons in the HTML
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+        const mapTileUrl = @json(config('maps.tile_url'));
+        const mapTileKey = @json(config('maps.tile_key'));
+        L.tileLayer(mapTileUrl.replace('{key}', encodeURIComponent(mapTileKey || '')), {
+            maxZoom: @json(config('maps.max_zoom')),
+            attribution: @json(config('maps.tile_attribution')),
+        }).addTo(map);
 
         const commandCenterLogoUrl = @json($commandCenterLogoUrl);
         const commandCenterImage = document.createElement('img');
@@ -194,16 +209,13 @@
         const targetReportId = urlParams.get('report_id');
 
         let currentRouteLayer = null;
+        let lastRouteRequest = null;
+        let routeRequestId = 0;
         let hasAttemptedFocus = false;
         let adminMarker = null;
         let adminCurrentLocation = null; // Stores the admin's GPS location
 
-        // Using config() pulls from the env file directly, bypassing cache issues.
-        const navigationApiKey = "{{ config('services.openrouteservice.key', env('NAVIGATION_API', '')) }}";
-
-        if (!navigationApiKey) {
-            console.warn("NAVIGATION_API is empty. Please add it to your .env file and run 'php artisan config:clear'.");
-        }
+        const routingUrl = @json(route('operations.live-map.route'));
 
         /* ============================== Custom Map Controls ============================== */
         // Bind the custom HTML zoom buttons to the Leaflet map instance
@@ -275,43 +287,61 @@
         });
 
         /* ============================== Routing ============================== */
+        const routeStatus = document.getElementById('route-status');
+        const routeStatusMessage = document.getElementById('route-status-message');
+
+        function setRouteStatus(message) {
+            routeStatusMessage.textContent = message;
+            routeStatus.classList.remove('hidden');
+        }
+
         function clearRoute() {
+            routeRequestId++;
+            lastRouteRequest = null;
             if (currentRouteLayer) {
                 map.removeLayer(currentRouteLayer);
                 currentRouteLayer = null;
             }
+            routeStatus.classList.add('hidden');
             document.getElementById('unroute-btn').classList.add('hidden');
             map.flyTo([commandCenterLat, commandCenterLng], 14, { animate: true, duration: 0.6 });
         }
 
         async function drawRoute(startLat, startLng, endLat, endLng) {
+            const requestId = ++routeRequestId;
+            lastRouteRequest = { startLat, startLng, endLat, endLng };
             if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-
-            if (!navigationApiKey) {
-                drawFallbackLine(startLat, startLng, endLat, endLng);
-                return;
-            }
+            currentRouteLayer = null;
+            document.getElementById('unroute-btn').classList.add('hidden');
+            setRouteStatus('Loading driving route…');
 
             try {
-                const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${navigationApiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`;
-
-                const response = await fetch(url);
+                const params = new URLSearchParams({
+                    from_lat: startLat,
+                    from_lng: startLng,
+                    to_lat: endLat,
+                    to_lng: endLng,
+                });
+                const response = await fetch(`${routingUrl}?${params}`, { headers: { Accept: 'application/json' } });
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'Routing API failed');
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.message || err.error || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
+                if (requestId !== routeRequestId) return;
 
-                if (data.features && data.features.length > 0) {
-                    const feature = data.features[0];
-                    const coordinates = feature.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                const feature = data.features?.[0];
+                const routeCoordinates = feature?.geometry?.coordinates;
+                const distance = feature?.properties?.segments?.[0]?.distance;
+                if (Array.isArray(routeCoordinates) && routeCoordinates.length > 1 && Number.isFinite(Number(distance))) {
+                    const coordinates = routeCoordinates.map(coord => [coord[1], coord[0]]);
 
                     currentRouteLayer = L.polyline(coordinates, {
                         color: '#3b82f6', weight: 5, opacity: 0.8, lineCap: 'round'
                     }).addTo(map);
 
-                    const distanceKm = (feature.properties.segments[0].distance / 1000).toFixed(2);
+                    const distanceKm = (Number(distance) / 1000).toFixed(2);
 
                     // Only show the distance, no ETA/time
                     currentRouteLayer.bindTooltip(`<b>${distanceKm} km</b>`, {
@@ -319,43 +349,26 @@
                     }).openTooltip();
 
                     map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
-                    
-                    // Show the Unroute button
+                    routeStatus.classList.add('hidden');
                     document.getElementById('unroute-btn').classList.remove('hidden');
                 } else {
-                    throw new Error('No route found');
+                    throw new Error('The routing service returned no drivable route.');
                 }
             } catch (e) {
+                if (requestId !== routeRequestId) return;
                 console.error("Routing API failed:", e.message);
-                drawFallbackLine(startLat, startLng, endLat, endLng);
+                setRouteStatus('Driving route unavailable. Check the route service and try again.');
             }
-        }
-
-        function drawFallbackLine(startLat, startLng, endLat, endLng) {
-            if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-            currentRouteLayer = L.polyline([[startLat, startLng], [endLat, endLng]], {
-                color: '#3b82f6', weight: 4, opacity: 0.8, dashArray: '10, 10', lineCap: 'round'
-            }).addTo(map);
-
-            const R = 6371;
-            const dLat = (endLat - startLat) * Math.PI / 180;
-            const dLon = (endLng - startLng) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(startLat * Math.PI / 180) * Math.cos(endLat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            const distance = (R * c).toFixed(2);
-
-            currentRouteLayer.bindTooltip(`Est. Distance: ${distance} km (Simulated Route)`, {
-                permanent: true, direction: 'center', className: 'route-distance-tooltip'
-            }).openTooltip();
-
-            map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
-            
-            // Show the Unroute button
-            document.getElementById('unroute-btn').classList.remove('hidden');
         }
 
         // Bind the Unroute button
         document.getElementById('unroute-btn').addEventListener('click', clearRoute);
+        document.getElementById('route-retry').addEventListener('click', () => {
+            if (lastRouteRequest) {
+                const { startLat, startLng, endLat, endLng } = lastRouteRequest;
+                drawRoute(startLat, startLng, endLat, endLng);
+            }
+        });
 
         // Used by the "Route" button inside the map popup
         window.ltRoute = (lat, lng) => {
@@ -382,6 +395,7 @@
 
         /* ============================== State ============================== */
         const markers = {};
+        const markerSignatures = {};
         const knownReportIds = new Set();
         let initialLoadDone = false;
         let pendingAcceptReports = [];
@@ -400,6 +414,10 @@
         
         const alarmAudioUrl = @json($alarmAudioUrl);
         const alarmPreferenceKey = 'admin-alarm-sound-enabled';
+        const alarmMuteUntilKey = 'admin-alarm-sound-muted-until';
+        const alarmSoundToggle = document.getElementById('alarm-sound-toggle');
+        const alarmMutedIndicator = document.getElementById('alarm-muted-indicator');
+        let alarmMuteTimeout = null;
         let alarmAudioContext = null;
         let alarmAudioElement = null;
         let alarmOscillators = null;
@@ -420,8 +438,60 @@
         }
 
         function alarmSoundEnabled() {
-            return localStorage.getItem(alarmPreferenceKey) !== 'false';
+            if (localStorage.getItem(alarmPreferenceKey) !== 'false') return true;
+            const mutedUntil = Number(localStorage.getItem(alarmMuteUntilKey) || 0);
+            return !Number.isFinite(mutedUntil) || mutedUntil <= Date.now();
         }
+
+        function renderAlarmSoundControls() {
+            const on = alarmSoundEnabled();
+            if (on && localStorage.getItem(alarmPreferenceKey) === 'false') {
+                localStorage.setItem(alarmPreferenceKey, 'true');
+                localStorage.removeItem(alarmMuteUntilKey);
+            }
+
+            if (alarmSoundToggle) {
+                alarmSoundToggle.textContent = on ? 'Alarm sound: On' : 'Alarm sound: Muted';
+                alarmSoundToggle.setAttribute('aria-pressed', String(on));
+                alarmSoundToggle.title = on ? 'Mute alarm sound for five minutes' : 'Alarm sound will turn back on automatically after five minutes';
+            }
+            alarmMutedIndicator?.classList.toggle('hidden', !pendingAcceptReports.length || on);
+
+            window.clearTimeout(alarmMuteTimeout);
+            alarmMuteTimeout = null;
+            if (!on) {
+                const remaining = Number(localStorage.getItem(alarmMuteUntilKey)) - Date.now();
+                if (remaining > 0) {
+                    alarmMuteTimeout = window.setTimeout(() => {
+                        localStorage.setItem(alarmPreferenceKey, 'true');
+                        localStorage.removeItem(alarmMuteUntilKey);
+                        renderAlarmSoundControls();
+                        if (pendingAcceptReports.length) startAlarmSound();
+                    }, remaining);
+                }
+            }
+        }
+
+        function unlockAlarmSound() {
+            renderAlarmSoundControls();
+            const context = getAlarmAudioContext();
+            if (context?.state === 'suspended') context.resume().catch(() => {});
+            startAlarmSound();
+        }
+
+        alarmSoundToggle?.addEventListener('click', () => {
+            const next = !alarmSoundEnabled();
+            if (next) {
+                localStorage.setItem(alarmPreferenceKey, 'true');
+                localStorage.removeItem(alarmMuteUntilKey);
+            } else {
+                localStorage.setItem(alarmMuteUntilKey, String(Date.now() + 5 * 60 * 1000));
+                localStorage.setItem(alarmPreferenceKey, 'false');
+            }
+            renderAlarmSoundControls();
+            if (next) unlockAlarmSound();
+            else stopAlarmSound();
+        });
 
         function startBuiltInAlarm() {
             const context = getAlarmAudioContext();
@@ -518,6 +588,8 @@
 
         function updateAcceptanceControl(pendingReports) {
             pendingAcceptReports = pendingReports;
+            poller?.setUrgent(pendingReports.length > 0);
+            renderAlarmSoundControls();
 
             if (pendingReports.length > 0) {
                 const nextReport = pendingReports[0];
@@ -548,12 +620,19 @@
             stopAlarmSound();
         }
 
-        document.addEventListener('pointerdown', startAlarmSound, { passive: true });
-        document.addEventListener('keydown', startAlarmSound);
+        renderAlarmSoundControls();
+        const onGesture = (event) => {
+            if (event.target?.closest?.('#alarm-sound-toggle')) return;
+            renderAlarmSoundControls();
+            if (alarmSoundEnabled()) unlockAlarmSound();
+        };
+        document.addEventListener('pointerdown', onGesture, { passive: true });
+        document.addEventListener('keydown', onGesture);
         window.addEventListener('pageshow', () => {
             if (pendingAcceptReports.length && alarmSoundEnabled()) startAlarmSound();
         });
         document.addEventListener('visibilitychange', () => {
+            renderAlarmSoundControls();
             if (!document.hidden && pendingAcceptReports.length && alarmSoundEnabled()) startAlarmSound();
         });
         window.addEventListener('pagehide', () => {
@@ -568,7 +647,8 @@
             if (alarmAudioContext?.state === 'running') alarmAudioContext.suspend().catch(() => {});
         });
         window.addEventListener('storage', (event) => {
-            if (event.key !== alarmPreferenceKey) return;
+            if (![alarmPreferenceKey, alarmMuteUntilKey].includes(event.key)) return;
+            renderAlarmSoundControls();
             if (alarmSoundEnabled()) startAlarmSound();
             else stopAlarmSound();
         });
@@ -644,6 +724,14 @@
         const openUrl = id => `${OPEN_BASE}?expand=${encodeURIComponent(id)}`;
         const safePrio = p => ['critical', 'high', 'medium', 'low'].includes(String(p).toLowerCase()) ? String(p).toLowerCase() : 'low';
         const fmtStatus = s => { const t = String(s ?? '').replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); };
+        function timeAgo(iso) {
+            if (!iso) return '';
+            const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+            if (s < 60) return 'just now';
+            if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+            if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+            return `${Math.floor(s / 86400)} d ago`;
+        }
 
         const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 
@@ -688,7 +776,7 @@
                     <div class="lt-pop-meta">
                         <span class="ops-badge ${getStatusBadge(report.status)}">${esc(fmtStatus(report.status))}</span>
                         <span class="ops-prio">${fmtStatus(p)} priority</span>
-                        <span class="lt-time">${esc(report.time || '')}</span>
+                        <span class="lt-time">${esc(timeAgo(report.submitted_at))}</span>
                     </div>
                 </div>
                 <div class="lt-pop-actions">
@@ -704,14 +792,7 @@
         }
 
         /* ============================== Fetch + render ============================== */
-        async function fetchLiveData() {
-            try {
-                const response = await fetch('{{ route('operations.live-map.data') }}', { cache: 'no-store' });
-                const data = await response.json();
-
-                const syncBadge = document.getElementById('sync-badge');
-                if (syncBadge) { syncBadge.classList.add('sync-pulse'); setTimeout(() => syncBadge.classList.remove('sync-pulse'), 800); }
-
+        function renderLiveData(data) {
                 const reports = data.reports || [];
                 updateAcceptanceControl(data.pending_reports || []);
 
@@ -721,6 +802,7 @@
                 reports.forEach(report => {
                     const svgIcon = getCategorySvg(report.category);
                     const priorityClass = safePrio(report.priority);
+                    const signature = [priorityClass, report.status, report.lat, report.lng, report.category, report.reference_code, report.location, report.submitted_at].join('|');
 
                     if (hasCoordinates(report) && !markers[report.id]) {
                         const icon = L.divIcon({ className: 'custom-div-icon', html: `<div class="custom-pin priority-${priorityClass}">${svgIcon}</div>`, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36] });
@@ -728,7 +810,8 @@
                         marker.bindTooltip(`<svg class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> NEW INCIDENT`, { permanent: false, direction: 'top', className: 'custom-map-tooltip', offset: [0, -36] });
                         marker.bindPopup(popupHtml(report, svgIcon), { className: 'lt-popup', minWidth: 260, maxWidth: 300 });
                         markers[report.id] = marker;
-                    } else if (hasCoordinates(report) && markers[report.id]) {
+                        markerSignatures[report.id] = signature;
+                    } else if (hasCoordinates(report) && markers[report.id] && markerSignatures[report.id] !== signature) {
                         const markerEl = markers[report.id].getElement();
                         if (markerEl) {
                             const pinEl = markerEl.firstElementChild;
@@ -736,13 +819,15 @@
                             pinEl.classList.add(`priority-${priorityClass}`);
                         }
                         markers[report.id].setPopupContent(popupHtml(report, svgIcon));
+                        markerSignatures[report.id] = signature;
                     } else if (markers[report.id]) {
                         map.removeLayer(markers[report.id]);
                         delete markers[report.id];
+                        delete markerSignatures[report.id];
                     }
                 });
 
-                for (let id in markers) { if (!activeIds.includes(String(id))) { map.removeLayer(markers[id]); delete markers[id]; } }
+                for (let id in markers) { if (!activeIds.includes(String(id))) { map.removeLayer(markers[id]); delete markers[id]; delete markerSignatures[id]; } }
 
                 if (newReports.length > 0 && initialLoadDone) {
                     const newest = newReports[0];
@@ -762,14 +847,39 @@
                         drawRoute(commandCenterLat, commandCenterLng, reportExists.lat, reportExists.lng);
                     }
                 }
-
-            } catch (error) {
-                console.error("Failed to fetch live data", error);
-            }
         }
 
-        fetchLiveData();
-        setInterval(fetchLiveData, 3000);
+        const { AdaptivePoller, conditionalJson, bindEcho } = window.LiveMapPolling;
+        const poller = new AdaptivePoller(
+            conditionalJson(@json(route('operations.live-map.data'))),
+            renderLiveData,
+            {
+                visibleSteps: [3000, 5000, 10000, 20000],
+                hiddenSteps: [15000, 30000, 60000],
+                onModeChange: (mode) => {
+                    const syncBadge = document.getElementById('sync-badge');
+                    if (!syncBadge) return;
+                    const labels = { live: ['Live Sync', 'Live connection active'], polling: ['Polling', 'Polling for updates'], offline: ['Offline', 'Unable to reach live data'] };
+                    const [label, title] = labels[mode] || labels.polling;
+                    syncBadge.lastChild.textContent = ` ${label}`;
+                    syncBadge.setAttribute('title', title);
+                },
+                onPoll: () => {
+                    const syncBadge = document.getElementById('sync-badge');
+                    if (syncBadge) { syncBadge.classList.add('sync-pulse'); setTimeout(() => syncBadge.classList.remove('sync-pulse'), 800); }
+                },
+                onError: (e) => {
+                    console.error('Failed to fetch live data', e);
+                    if (/HTTP (401|419)/.test(e.message)) {
+                        poller.stop();
+                        document.getElementById('sync-badge')?.setAttribute('title', 'Session expired. Reload to sign in again.');
+                    }
+                },
+            },
+        );
+        poller.start();
+        if (window.Echo) bindEcho(poller, window.Echo, 'admin.live-map', '.live-map.changed');
+        const fetchLiveData = () => poller.refresh();
     });
 </script>
 @endsection

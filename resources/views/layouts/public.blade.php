@@ -8,4 +8,6 @@
         @yield('content')
         @include('public.footer')
     </div>
+
+    @stack('scripts')
 @endsection

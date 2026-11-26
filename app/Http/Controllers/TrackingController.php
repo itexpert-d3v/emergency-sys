@@ -14,6 +14,10 @@ class TrackingController extends Controller
 {
     public function show(Request $request): Response
     {
+        if ($request->query('reference') === null && $request->query('token') === null) {
+            return response()->view('tracking.start')->withHeaders($this->privateTrackingHeaders());
+        }
+
         return $this->resolve(
             (string) $request->query('reference', ''),
             (string) $request->query('token', '')
@@ -37,10 +41,12 @@ class TrackingController extends Controller
 
         return response()->json([
             'reference_code' => $report->reference_code,
-            'status' => $report->status,
-            'submitted_at' => $report->submitted_at?->toISOString(),
-            'expires_at' => $report->expires_at?->toISOString(),
-            'timeline' => $this->timeline($report),
+            'status'         => $report->status,
+            'submitted_at'   => $report->submitted_at?->toISOString(),
+            'expires_at'     => $report->expires_at?->toISOString(),
+            'has_photo'      => (bool) $report->photo_path,
+            'thread_closed'  => (bool) $report->thread_closed,
+            'timeline'       => $this->timeline($report),
             'public_updates' => $this->publicUpdates($report),
             'message_thread' => $this->messageThread($report),
         ])->withHeaders($this->privateTrackingHeaders());
@@ -58,16 +64,16 @@ class TrackingController extends Controller
         }
 
         return response()->view('tracking.show', [
-            'tracking_token' => $token,
-            'thread_closed' => (bool) $report->thread_closed,
-            'reference_code' => $report->reference_code,
-            'submitted_at' => $report->submitted_at,
-            'status' => $report->status,
-            'expires_at' => $report->expires_at,
-            'has_photo' => (bool) $report->photo_path,
-            'timeline' => $this->timeline($report),
-            'public_updates' => $this->publicUpdates($report),
-            'message_thread' => $this->messageThread($report),
+            'tracking_token'  => $token,
+            'thread_closed'   => (bool) $report->thread_closed,
+            'reference_code'  => $report->reference_code,
+            'submitted_at'    => $report->submitted_at,
+            'status'          => $report->status,
+            'expires_at'      => $report->expires_at,
+            'has_photo'       => (bool) $report->photo_path,
+            'timeline'        => $this->timeline($report),
+            'public_updates'  => $this->publicUpdates($report),
+            'message_thread'  => $this->messageThread($report),
         ])->withHeaders($this->privateTrackingHeaders());
     }
 
@@ -93,49 +99,55 @@ class TrackingController extends Controller
         return $trackingToken;
     }
 
+    /**
+     * Normalize both branches (real status events and the fallback) to
+     * plain objects so the mapping below is uniform.
+     */
     private function timeline(IncidentReport $report): array
     {
         $events = $report->statusEvents->sortBy('created_at')->values();
 
         if ($events->isEmpty()) {
-            $events = collect([[
-                'status' => 'submitted',
+            $events = collect();
+
+            $events->push((object) [
+                'status'     => 'submitted',
                 'created_at' => $report->submitted_at,
-            ]]);
+            ]);
 
             if ($report->status !== 'submitted') {
-                $events->push([
-                    'status' => $report->status,
+                $events->push((object) [
+                    'status'     => $report->status,
                     'created_at' => $report->updated_at,
                 ]);
             }
         }
 
         return $events->map(fn ($event) => [
-            'status' => $event['status'] ?? $event->status,
-            'label' => $this->statusLabel($event['status'] ?? $event->status),
-            'timestamp' => ($event['created_at'] ?? $event->created_at)?->toISOString(),
+            'status'    => $event->status,
+            'label'     => $this->statusLabel($event->status),
+            'timestamp' => $event->created_at?->toISOString(),
         ])->all();
     }
 
     private function statusLabel(string $status): string
     {
         return match ($status) {
-            'submitted' => __('Submitted'),
+            'submitted'   => __('Submitted'),
             'in_progress' => __('In progress'),
-            'resolved' => __('Resolved'),
-            'closed' => __('Closed'),
-            default => __(Str::headline($status)),
+            'resolved'    => __('Resolved'),
+            'closed'      => __('Closed'),
+            default       => __(Str::headline($status)),
         };
     }
 
     private function messageThread(IncidentReport $report): array
     {
         return $report->messages()->orderBy('created_at')->get()->map(fn (ReportMessage $message) => [
-            'id' => $message->id,
+            'id'          => $message->id,
             'sender_type' => $message->sender_type,
-            'body' => $message->body,
-            'created_at' => $message->created_at?->toISOString(),
+            'body'        => $message->body,
+            'created_at'  => $message->created_at?->toISOString(),
         ])->all();
     }
 
@@ -146,8 +158,8 @@ class TrackingController extends Controller
             ->orderBy('created_at')
             ->get()
             ->map(fn (ReportMessage $message) => [
-                'id' => $message->id,
-                'body' => $message->body,
+                'id'         => $message->id,
+                'body'       => $message->body,
                 'created_at' => $message->created_at?->toISOString(),
             ])->all();
     }
@@ -162,10 +174,10 @@ class TrackingController extends Controller
     private function privateTrackingHeaders(): array
     {
         return [
-            'Cache-Control' => 'private, no-store',
-            'Referrer-Policy' => 'no-referrer',
-            'X-Robots-Tag' => 'noindex, nofollow',
-            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control'            => 'private, no-store',
+            'Referrer-Policy'          => 'no-referrer',
+            'X-Robots-Tag'             => 'noindex, nofollow',
+            'X-Content-Type-Options'   => 'nosniff',
         ];
     }
 }

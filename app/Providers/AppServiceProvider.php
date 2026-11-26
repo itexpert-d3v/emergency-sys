@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\LiveMapChanged;
+use App\Models\IncidentReport;
 use App\Models\NewsPost;
 use App\Services\Audit\AuditWriter;
 use App\Support\I18n\LocaleCatalog;
@@ -24,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        IncidentReport::saved(fn () => rescue(fn () => LiveMapChanged::dispatch()));
+        IncidentReport::deleted(fn () => rescue(fn () => LiveMapChanged::dispatch()));
+
         $disabledLimiter = fn (Request $request) => Limit::perMinute(PHP_INT_MAX)->by('progressive-limits-disabled:'.$request->ip());
         $whenEnabled = fn (callable $limiter): callable => config('progressive_rate_limit.enabled')
             ? $limiter
@@ -45,18 +50,52 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('public-tracking', $whenEnabled(fn (Request $request) => Limit::perMinute(10)->by('tracking-ip:'.$request->ip())
         ));
 
-        RateLimiter::for('public-message-read', $whenEnabled(fn (Request $request) => Limit::perMinute(20)->by('msg-read:'.sha1((string) $request->route('token')))
-        ));
+        /*
+         * Public message read.
+         * messaging.js polls every 15s → 4 req/min per open tab. 30/min per
+         * token lets a reporter keep several tabs open; 60/min per IP is a
+         * generous backstop for shared networks.
+         */
+        RateLimiter::for('public-message-read', $whenEnabled(fn (Request $request) => [
+            Limit::perMinute(30)->by('msg-read-token:'.sha1((string) $request->route('token'))),
+            Limit::perMinute(60)->by('msg-read-ip:'.$request->ip()),
+        ]));
 
+        /*
+         * Public message write.
+         * 5/min per token stops spam bursts; 30/hr per token stops sustained
+         * abuse from one tracking link; 10/min per IP catches attackers who
+         * cycle through many tokens they don't own.
+         */
         RateLimiter::for('public-message', $whenEnabled(fn (Request $request) => [
-            Limit::perMinute(8)->by('msg-write:'.sha1((string) $request->route('token'))),
+            Limit::perMinute(5)->by('msg-write-token:'.sha1((string) $request->route('token'))),
+            Limit::perHour(30)->by('msg-write-token-hour:'.sha1((string) $request->route('token'))),
             Limit::perMinute(10)->by('msg-write-ip:'.$request->ip()),
         ]));
 
         RateLimiter::for('staff-read', $whenEnabled(fn (Request $request) => Limit::perMinute(60)->by('staff-read:'.($request->user()?->id ?? $request->ip()))
         ));
 
+        RateLimiter::for('live-map', $whenEnabled(fn (Request $request) => Limit::perMinute(120)->by('live-map:'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        ));
+
+        RateLimiter::for('route-directions', $whenEnabled(fn (Request $request) => Limit::perMinute(30)->by('route-directions:'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        ));
+
         RateLimiter::for('staff-write', $whenEnabled(fn (Request $request) => Limit::perMinute(30)->by('staff-write:'.($request->user()?->id ?? $request->ip()))
+        ));
+
+        /*
+         * Staff message write.
+         * 20/min per staff user is comfortable for replying to many reports;
+         * 60/min per report stops one staff member from flooding a thread.
+         */
+        RateLimiter::for('staff-message', $whenEnabled(fn (Request $request) => [
+            Limit::perMinute(20)->by('staff-msg-user:'.($request->user()?->id ?? $request->ip())),
+            Limit::perMinute(60)->by('staff-msg-report:'.(string) $request->route('report')),
+        ]));
+
+        RateLimiter::for('staff-message-read', $whenEnabled(fn (Request $request) => Limit::perMinute(120)->by('staff-msg-read:'.($request->user()?->id ?? $request->ip()))
         ));
 
         RateLimiter::for('admin-write', $whenEnabled(fn (Request $request) => Limit::perMinute(30)->by('admin-write:'.($request->user()?->id ?? $request->ip()))

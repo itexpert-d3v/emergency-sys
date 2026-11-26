@@ -11,6 +11,8 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/landing-motion.js',
+                'resources/js/messaging.js',
+                'resources/js/admin/live-map-poller.js',
             ],
             refresh: true,
         }),

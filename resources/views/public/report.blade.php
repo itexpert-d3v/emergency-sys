@@ -13,321 +13,151 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 @endpush
 
-@push('styles')
-    <style>
-        #map { height: 320px; width: 100%; border-radius: 8px; z-index: 1; }
-        /* Fix for Leaflet dark mode controls */
-        .dark .leaflet-layer, .dark .leaflet-control-zoom-in, .dark .leaflet-control-zoom-out { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
-    </style>
-@endpush
-
 @section('content')
-        <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-            <header class="civic-panel mb-5 grid gap-5 rounded-[12px] p-5 dark:bg-slate-950/95 dark:shadow-black/30 lg:grid-cols-[minmax(16rem,0.7fr)_minmax(0,1.3fr)] lg:items-center">
-                <div>
-                    <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{{ __('Report an incident') }}</h1>
-                    <p class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {{ __('Share the key details and a responder can review the report quickly.') }}
-                    </p>
-                </div>
-                <div class="border-t border-slate-200 pt-4 dark:border-slate-700 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-                    <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{{ __('Before you submit') }}</p>
-                    <ul class="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3 dark:text-slate-300">
-                        <li>• {{ __('Describe what happened clearly and with facts.') }}</li>
-                        <li>• {{ __('Include the nearest location or landmark.') }}</li>
-                        <li>• {{ __('Use the tracking link to follow updates after submission.') }}</li>
-                    </ul>
-                </div>
-            </header>
+    <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <header class="civic-panel mb-6 grid gap-5 rounded-[12px] p-5 lg:grid-cols-[minmax(16rem,0.7fr)_minmax(0,1.3fr)] lg:items-center">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-[var(--text)]">{{ __('Report an incident') }}</h1>
+                <p class="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+                    {{ __('Share the key details and a responder can review the report quickly.') }}
+                </p>
+            </div>
+            <div class="border-t border-[var(--border)] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+                <p class="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--text-muted)]">{{ __('Before you submit') }}</p>
+                <ul class="mt-3 grid gap-2 text-sm text-[var(--text-muted)] sm:grid-cols-3">
+                    <li>• {{ __('Describe what happened clearly and with facts.') }}</li>
+                    <li>• {{ __('Include the nearest location or landmark.') }}</li>
+                    <li>• {{ __('Use the tracking link to follow updates after submission.') }}</li>
+                </ul>
+            </div>
+        </header>
 
-            <main class="civic-panel rounded-[12px] p-5 dark:bg-slate-950/95 dark:shadow-black/30 sm:p-7">
-                <div id="form-alert" class="hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200" aria-live="polite"></div>
+        <main class="civic-panel rounded-[12px] p-5 sm:p-7">
+            <x-feedback.flash position="inline" />
 
-                <form id="report-form" action="{{ route('public.report.store') }}" method="post" enctype="multipart/form-data" class="mt-4 space-y-5">
-                    @csrf
-                    <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                    <input type="hidden" name="language" value="{{ app()->getLocale() }}">
-                    
-                    @if($errors->any())
-                        <div class="rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-                            <p class="font-bold">{{ __('Please check the highlighted report details and try again.') }}</p>
-                            <ul class="mt-2 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-                        </div>
-                    @endif
-                    
-                    <fieldset class="space-y-4" aria-labelledby="incident-heading">
-                        <legend id="incident-heading" class="flex flex-col gap-3 text-lg font-black text-slate-900 sm:flex-row sm:items-center sm:justify-between dark:text-white">
-                            <span>{{ __('Report details') }}</span>
-                            <span class="w-full max-w-xs">
-                                <span data-report-progress-label class="block text-right text-xs font-semibold text-slate-500 dark:text-slate-400">0 of 4 required details complete</span>
-                                <span class="mt-1 block h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" role="progressbar" aria-label="Report completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                                    <span data-report-progress-bar class="block h-full w-0 rounded-full bg-blue-800 transition-[width] duration-200 dark:bg-blue-400"></span>
-                                </span>
+            <form id="report-form" action="{{ route('public.report.store') }}" method="post" enctype="multipart/form-data" class="mt-5 space-y-6" novalidate>
+                @csrf
+                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                <input type="hidden" name="language" value="{{ app()->getLocale() }}">
+
+                <fieldset class="space-y-5" aria-labelledby="incident-heading">
+                    <legend id="incident-heading" class="flex flex-col gap-3 text-lg font-black text-[var(--text)] sm:flex-row sm:items-center sm:justify-between">
+                        <span>{{ __('Report details') }}</span>
+                        <span class="w-full max-w-xs">
+                            <span data-report-progress-label class="block text-right text-xs font-semibold text-[var(--text-muted)]">0 of 4 required details complete</span>
+                            <span class="mt-1 block h-2 overflow-hidden rounded-full bg-[var(--surface-raised)]" role="progressbar" aria-label="Report completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                <span data-report-progress-bar class="block h-full w-0 rounded-full bg-[var(--accent)] transition-[width] duration-200"></span>
                             </span>
-                        </legend>
-                        
-                        <div>
-                            <label for="description" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('What happened?') }}</label>
-                            <x-ui.textarea id="description" name="description" rows="6" minlength="20" maxlength="2000" title="Describe what happened, what is affected, and where it occurred. At least 20 characters." placeholder="{{ __('Describe what happened, who or what is affected, and the help needed.') }}" required />
-                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('Include the facts that help the team understand the situation quickly.') }}</p>
-                        </div>
-                    </fieldset>
+                        </span>
+                    </legend>
 
-                    <fieldset class="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-700" aria-labelledby="contact-heading">
-                        <legend id="contact-heading" class="text-lg font-black text-slate-900 dark:text-white">{{ __('Your contact') }}</legend>
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <label for="reporter_name" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Reporter name') }}</label>
-                                <x-ui.input id="reporter_name" name="reporter_name" type="text" pattern="[\p{L}\p{M}]+([ .'-]+[\p{L}\p{M}]+)*\.?" title="Use letters only, with spaces, hyphens, apostrophes, or periods as separators." placeholder="{{ __('Full name') }}" required />
-                            </div>
-                            <div>
-                                <label for="contact_number" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Contact number') }}</label>
-                                <x-ui.input id="contact_number" name="contact_number" type="tel" pattern="\+63[0-9]{10,12}" title="Enter a Philippine phone number starting with +63, for example +639171234567." placeholder="{{ __('+63...') }}" required />
-                            </div>
-                        </div>
+                    <div>
+                        <label for="description" class="mb-2 block text-sm font-semibold text-[var(--text)]">{{ __('What happened?') }}</label>
+                        <x-ui.textarea id="description" name="description" rows="6" minlength="20" maxlength="2000" class="w-full" title="Describe what happened, what is affected, and where it occurred. At least 20 characters." placeholder="{{ __('Example: A man collapsed near the barangay hall around 2:30 PM. He is unconscious but breathing, and bystanders are trying to keep him comfortable.') }}" required />
+                        <p class="mt-2 text-xs text-[var(--text-muted)]">{{ __('Include the facts that help the team understand the situation quickly.') }}</p>
+                    </div>
+                </fieldset>
 
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/70">
-                            <input type="hidden" name="reporting_for_other" value="0">
-                            <label class="flex items-center gap-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                <input id="reporting_for_other" name="reporting_for_other" type="checkbox" value="1" class="h-4 w-4 rounded border-slate-300 text-blue-800 focus:ring-blue-800 dark:border-slate-600 dark:bg-slate-900" @checked(old('reporting_for_other')) />
-                                {{ __('I am reporting for someone else') }}
+                <fieldset class="space-y-6 border-t border-[var(--border)] pt-6" aria-labelledby="contact-heading">
+                    <legend id="contact-heading" class="text-lg font-black text-[var(--text)]">{{ __('Your contact') }}</legend>
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div class="space-y-2">
+                            <label for="reporter_name" class="block text-sm font-semibold text-[var(--text)]">{{ __('Reporter name') }}</label>
+                            <x-ui.input id="reporter_name" name="reporter_name" type="text" pattern="[\p{L}\p{M}]+([ .'-]+[\p{L}\p{M}]+)*\.?'" title="Use letters only, with spaces, hyphens, apostrophes, or periods as separators." placeholder="{{ __('e.g. Juan Dela Cruz') }}" required />
+                        </div>
+                        <div class="space-y-2">
+                            <label for="contact_number" class="block text-sm font-semibold text-[var(--text)]">{{ __('Contact number') }}</label>
+                            <x-ui.input id="contact_number" name="contact_number" type="tel" pattern="\+63[0-9]{10,12}" title="Enter a Philippine phone number starting with +63, for example +639171234567." placeholder="{{ __('+63 917 123 4567') }}" required />
+                            <p class="text-xs text-[var(--text-muted)]">{{ __('Include the +63 country code, e.g. +639171234567.') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 sm:p-5">
+                        <input type="hidden" name="reporting_for_other" value="0">
+                        <label class="flex items-start gap-3 text-sm font-semibold text-[var(--text)]">
+                            <input id="reporting_for_other" name="reporting_for_other" type="checkbox" value="1" class="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--focus)]" @checked(old('reporting_for_other')) />
+                            <span>{{ __('I am reporting for someone else') }}</span>
+                        </label>
+                        <div id="other-person-fields" class="space-y-4 border-t border-[var(--border)] pt-4 @if(!old('reporting_for_other')) hidden @endif">
+                            <div class="space-y-2">
+                                <label for="relationship" class="block text-sm font-semibold text-[var(--text)]">{{ __('Relationship to the person') }}</label>
+                                <x-ui.input id="relationship" name="relationship" type="text" maxlength="80" title="Describe how you know the person you are reporting for." placeholder="{{ __('e.g. Parent, neighbor, coworker') }}" value="{{ old('relationship') }}" />
+                            </div>
+                            <input type="hidden" name="victim_contactable" value="0">
+                            <label class="flex items-start gap-3 text-sm font-semibold text-[var(--text)]">
+                                <input id="victim_contactable" name="victim_contactable" type="checkbox" value="1" class="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--focus)]" @checked(old('victim_contactable')) />
+                                <span>{{ __('The person can be contacted directly') }}</span>
                             </label>
-
-                            <div id="other-person-fields" class="mt-4 space-y-4 @if(!old('reporting_for_other')) hidden @endif">
-                                <div>
-                                    <label for="relationship" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Relationship to the person') }}</label>
-                                    <input id="relationship" name="relationship" type="text" maxlength="80" title="Describe how you know the person you are reporting for." class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-900/60" placeholder="{{ __('Parent / neighbor / coworker') }}" value="{{ old('relationship') }}">
-                                </div>
-
-                                <input type="hidden" name="victim_contactable" value="0">
-                                <label class="flex items-center gap-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    <input id="victim_contactable" name="victim_contactable" type="checkbox" value="1" class="h-4 w-4 rounded border-slate-300 text-blue-800 focus:ring-blue-800 dark:border-slate-600 dark:bg-slate-900" @checked(old('victim_contactable')) />
-                                    {{ __('The person can be contacted directly') }}
-                                </label>
-                            </div>
                         </div>
+                    </div>
 
-                        @if(config('services.turnstile.site_key'))
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-                                <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}"></div>
-                            </div>
-                        @endif
-                    </fieldset>
+                    @if(config('services.turnstile.site_key'))
+                        <div class="rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-4"><div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}"></div></div>
+                    @endif
+                </fieldset>
 
-                    <fieldset class="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-700" aria-labelledby="location-heading">
-                        <legend id="location-heading" class="text-lg font-black text-slate-900 dark:text-white">{{ __('Location') }}</legend>
-                        
-                        {{-- Map & Auto-Locate Button --}}
-                        <div>
+                <fieldset class="report-location-section space-y-6 border-t border-[var(--border)] pt-6" aria-labelledby="location-heading">
+                    <legend id="location-heading" class="text-lg font-black text-[var(--text)]">{{ __('Location') }}</legend>
+
+                    <div class="report-location-grid items-start">
+                        {{-- Map column --}}
+                        <div class="report-location-map">
                             <div class="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    {{ __('Pin your exact location') }} <span class="font-normal text-slate-500">(optional)</span>
-                                </label>
-                                <button type="button" id="locate-btn" class="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <p class="text-sm font-semibold text-[var(--text)]">{{ __('Pin your exact location') }} <span class="font-normal text-[var(--text-muted)]">(optional)</span></p>
+                                <button type="button" id="locate-btn" class="report-locate-btn">
                                     <span id="locate-btn-text">{{ __('Use my current location') }}</span>
                                 </button>
                             </div>
-                            
-                            <div id="map" class="border border-slate-300 dark:border-slate-600"></div>
-                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('Click the button to find yourself automatically, or click on the map to place the pin manually.') }}</p>
+                            <div id="map" class="border border-[var(--border)]" data-tile-url="{{ config('maps.tile_url') }}" data-tile-attribution="{{ config('maps.tile_attribution') }}" data-tile-key="{{ config('maps.tile_key') }}"></div>
+                            <p id="pin-state" class="report-pin-state" data-set="false">No pin set — responders will rely on the landmark text.</p>
+                            <p id="location-status" class="report-location-status" role="status" aria-live="polite"></p>
+                            <p id="pin-live-region" class="sr-only" aria-live="polite"></p>
                         </div>
 
-                        <div>
-                            <label for="location_text" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ __('Location details / landmark') }}</label>
-                            <input id="location_text" name="location_text" type="text" title="Enter a barangay, street, landmark, or nearby location. You can use GPS instead." class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:ring-blue-900/60" placeholder="{{ __('Barangay / landmark / street name') }}" value="{{ old('location_text') }}">
-                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('A nearby landmark helps responders find the location.') }}</p>
-                        </div>
-                        
-                        <input id="latitude" name="latitude" type="hidden" value="{{ old('latitude') }}">
-                        <input id="longitude" name="longitude" type="hidden" value="{{ old('longitude') }}">
-                        <input id="location_accuracy" name="location_accuracy" type="hidden" value="{{ old('location_accuracy') }}">
-                        
-                        <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                    <p class="font-bold text-slate-900 dark:text-slate-100">{{ __('Add one supporting photo') }}</p>
-                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Optional. JPG, JPEG, PNG, or WebP up to 4 MB. Avoid images that identify victims.') }}</p>
-                                </div>
+                        {{-- Details column – full-width location input + photo --}}
+                        <div class="report-location-details space-y-5">
+                            <div class="space-y-2">
+                                <label for="location_text" class="block text-sm font-semibold text-[var(--text)]">{{ __('Landmark / barangay / street (optional)') }}</label>
+                                <x-ui.input id="location_text" name="location_text" type="text" title="Enter a barangay, street, landmark, or nearby location. You can use GPS instead." placeholder="{{ __('e.g. Barangay San Isidro, near the covered court') }}" value="{{ old('location_text') }}" class="w-full" />
+                                <p id="location-autofilled-note" class="hidden text-xs text-[var(--text-muted)]">{{ __('Address auto-filled from your GPS pin. You can edit it.') }}</p>
+                                <p class="text-xs text-[var(--text-muted)]">{{ __('A nearby landmark helps responders find the location.') }}</p>
                             </div>
-                            <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-4 block w-full text-sm text-slate-700 file:mr-4 file:min-h-10 file:border-0 file:bg-blue-800 file:px-4 file:py-2 file:font-bold file:text-white dark:text-slate-200 dark:file:bg-blue-400 dark:file:text-slate-950">
-                        </div>
-                    </fieldset>
 
-                    <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
-                        <x-ui.button type="submit">{{ __('Submit a report') }}</x-ui.button>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Your information is only used to respond to this report.') }}</p>
+                            <input id="latitude" name="latitude" type="hidden" value="{{ old('latitude') }}">
+                            <input id="longitude" name="longitude" type="hidden" value="{{ old('longitude') }}">
+                            <input id="location_accuracy" name="location_accuracy" type="hidden" value="{{ old('location_accuracy') }}">
+
+                            <div class="report-photo-section">
+                                <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" tabindex="0">
+                                <div data-photo-dropzone role="button" tabindex="0" aria-label="Add an optional supporting photo" class="report-photo-dropzone">
+                                    <span class="report-photo-icon" aria-hidden="true">＋</span>
+                                    <p>{{ __('Add a supporting photo') }}</p>
+                                    <small>JPG, PNG, or WebP · up to 4 MB</small>
+                                </div>
+                                <div data-photo-preview class="report-photo-preview hidden">
+                                    <img data-photo-preview-image src="" alt="Selected supporting photo preview">
+                                    <div class="min-w-0"><p data-photo-preview-name class="truncate font-bold text-[var(--text)]"></p><p data-photo-preview-size class="text-xs text-[var(--text-muted)]"></p></div>
+                                    <button type="button" data-photo-remove class="report-photo-remove">Remove</button>
+                                </div>
+                                <p class="mt-2 text-xs text-[var(--text-muted)]">{{ __('Avoid images that identify victims.') }}</p>
+                            </div>
+                        </div>
                     </div>
-                </form>
-            </main>
-        </div>
-        @include('public.report-flow')
+                </fieldset>
+
+                <div class="flex flex-col gap-4 border-t border-[var(--border)] pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <button type="submit" id="report-submit-btn" data-shake-target class="report-submit-btn">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <span>{{ __('Submit a report') }}</span>
+                    </button>
+                    <p class="text-xs text-[var(--text-muted)]">{{ __('Your information is only used to respond to this report.') }}</p>
+                </div>
+            </form>
+        </main>
+    </div>
+    @include('public.report-flow')
 @endsection
 
 @push('scripts')
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Default coordinates (Kalibo, Aklan roughly)
-            const defaultLat = 11.7061;
-            const defaultLng = 122.3687;
-            
-            const latInput = document.getElementById('latitude');
-            const lngInput = document.getElementById('longitude');
-            const accInput = document.getElementById('location_accuracy');
-            const locationTextInput = document.getElementById('location_text');
-            const locateBtn = document.getElementById('locate-btn');
-            const locateBtnText = document.getElementById('locate-btn-text');
-
-            // Track if the user types something manually
-            let hasManuallyTyped = false;
-            locationTextInput.addEventListener('input', () => {
-                hasManuallyTyped = true;
-            });
-
-            // Check if there are old values from a failed validation
-            const initialLat = latInput.value ? parseFloat(latInput.value) : defaultLat;
-            const initialLng = lngInput.value ? parseFloat(lngInput.value) : defaultLng;
-
-            // Initialize Map
-            const map = L.map('map').setView([initialLat, initialLng], 13);
-
-            // Add OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            // Add a marker
-            const marker = L.marker([initialLat, initialLng], {
-                draggable: true
-            }).addTo(map);
-
-            // Function to update inputs and reverse geocode
-            async function updateLocation(lat, lng, forceUpdate = false) {
-                latInput.value = lat.toFixed(7);
-                lngInput.value = lng.toFixed(7);
-
-                // Update address if user hasn't manually typed OR if forceUpdate is true
-                if (!hasManuallyTyped || forceUpdate) {
-                    locationTextInput.placeholder = "Fetching address...";
-                    try {
-                        // Use OpenStreetMap Nominatim API (zoom=16 grabs streets better than 18)
-                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`);
-                        const data = await response.json();
-                        
-                        if (data && data.address) {
-                            const addr = data.address;
-                            
-                            // Extract specific components targeting PH address structures
-                            const street = addr.road || addr.pedestrian || addr.path || '';
-                            // In the PH, barangays can be under village, suburb, neighbourhood, or city_district
-                            const barangay = addr.village || addr.suburb || addr.city_district || addr.neighbourhood || addr.quarter || '';
-                            const municipality = addr.city || addr.town || addr.municipality || '';
-                            
-                            // Format cleanly: "Street, Brgy. Barangay, Municipality"
-                            let formattedAddress = [];
-                            
-                            if (street) formattedAddress.push(street);
-                            
-                            // Add Brgy. prefix if it doesn't already start with "Brgy" or "Barangay"
-                            if (barangay) {
-                                if (barangay.toLowerCase().startsWith('brgy') || barangay.toLowerCase().startsWith('barangay')) {
-                                    formattedAddress.push(barangay);
-                                } else {
-                                    formattedAddress.push(`Brgy. ${barangay}`);
-                                }
-                            }
-                            
-                            if (municipality) formattedAddress.push(municipality);
-
-                            // If we got the main parts, use them. Otherwise, fallback to display_name.
-                            if (formattedAddress.length > 0) {
-                                locationTextInput.value = formattedAddress.join(', ');
-                            } else {
-                                locationTextInput.value = data.display_name;
-                            }
-                        }
-                    } catch (error) {
-                        console.log("Could not fetch address automatically.");
-                    } finally {
-                        locationTextInput.placeholder = "Barangay / landmark / street name";
-                    }
-                }
-            }
-
-            // Update hidden inputs when marker is dragged
-            marker.on('dragend', function () {
-                const position = marker.getLatLng();
-                updateLocation(position.lat, position.lng, false); 
-            });
-
-            // Update marker and inputs when map is clicked
-            map.on('click', function (e) {
-                marker.setLatLng(e.latlng);
-                updateLocation(e.latlng.lat, e.latlng.lng, false);
-            });
-
-            // Handle "Use my current location" button click
-            locateBtn.addEventListener('click', function() {
-                if (!navigator.geolocation) {
-                    alert("Geolocation is not supported by your browser.");
-                    return;
-                }
-
-                locateBtnText.textContent = "Locating...";
-                locateBtn.disabled = true;
-
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const userLat = position.coords.latitude;
-                        const userLng = position.coords.longitude;
-                        
-                        map.setView([userLat, userLng], 16);
-                        marker.setLatLng([userLat, userLng]);
-                        accInput.value = position.coords.accuracy.toFixed(2);
-                        
-                        // Reset manual typing since they clicked "use my location"
-                        hasManuallyTyped = false;
-                        locationTextInput.value = '';
-                        
-                        // Force the update
-                        updateLocation(userLat, userLng, true);
-
-                        locateBtnText.textContent = "Location Pinned";
-                        locateBtn.disabled = false;
-                        
-                        setTimeout(() => {
-                            locateBtnText.textContent = "Use my current location";
-                        }, 3000);
-                    },
-                    (error) => {
-                        console.log("Geolocation failed:", error.message);
-                        alert("Unable to retrieve your location. Please ensure location services are enabled and permissions are granted.");
-                        locateBtnText.textContent = "Use my current location";
-                        locateBtn.disabled = false;
-                    },
-                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                );
-            });
-
-            // Auto-trigger on load if empty
-            if (!latInput.value && !lngInput.value && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const userLat = position.coords.latitude;
-                        const userLng = position.coords.longitude;
-                        map.setView([userLat, userLng], 16);
-                        marker.setLatLng([userLat, userLng]);
-                        accInput.value = position.coords.accuracy.toFixed(2);
-                        
-                        hasManuallyTyped = false;
-                        updateLocation(userLat, userLng, true);
-                    },
-                    (error) => { console.log("Auto-location denied."); }
-                );
-            }
-        });
-    </script>
 @endpush

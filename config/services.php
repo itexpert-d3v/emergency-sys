@@ -40,4 +40,9 @@ return [
         'secret_key' => env('TURNSTILE_SECRET_KEY'),
     ],
 
+    'openrouteservice' => [
+        'key' => env('NAVIGATION_API'),
+        'directions_url' => env('OPENROUTESERVICE_DIRECTIONS_URL', 'https://api.heigit.org/openrouteservice/v2/directions/driving-car'),
+    ],
+
 ];

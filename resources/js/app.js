@@ -3,6 +3,9 @@ import './report-form';
 import './messaging';
 import './pwa';
 import './report-draft';
+import './feedback/shake';
+import './report-location';
+import './report-photo';
 
 const themeKey = 'emergency-sys-theme';
 const root = document.documentElement;

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\LiveMapChanged;
 use App\Models\BannedIp;
 use App\Models\BannedPhone;
 use App\Models\IncidentCategory;
@@ -11,6 +12,8 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
@@ -72,14 +75,14 @@ class AdminDashboardController extends Controller
             ->limit(10)
             ->get();
 
+        $summary = Cache::remember('admin-dashboard:summary', now()->addSeconds(20), fn () => (array) IncidentReport::query()
+            ->selectRaw("COUNT(*) as total, SUM(status IN ('submitted','in_progress','queued')) as open, SUM(status = 'resolved') as resolved, SUM(priority = 'critical') as critical")
+            ->first()
+            ?->only(['total', 'open', 'resolved', 'critical']));
+
         return view('admin.dashboard', [
             'reports' => $reports,
-            'summary' => [
-                'total' => IncidentReport::query()->count(),
-                'open' => IncidentReport::query()->whereIn('status', ['submitted', 'in_progress', 'queued'])->count(),
-                'resolved' => IncidentReport::query()->where('status', 'resolved')->count(),
-                'critical' => IncidentReport::query()->where('priority', 'critical')->count(),
-            ],
+            'summary' => array_map('intval', $summary),
             'reportTrend' => $reportTrend,
             'statusCounts' => $statusCounts,
             'selectedMonth' => $selectedMonth,
@@ -121,6 +124,10 @@ class AdminDashboardController extends Controller
             ->where('status', '!=', 'rejected')
             ->whereNull('accepted_at')
             ->update(['accepted_at' => now(), 'updated_at' => now()]) === 1;
+
+        if ($accepted) {
+            rescue(fn () => LiveMapChanged::dispatch());
+        }
 
         $result = [
             'accepted' => $accepted,
@@ -247,59 +254,75 @@ class AdminDashboardController extends Controller
     }
 
     /** Returns active reports, pending acceptance details, and recent conversation messages. */
-    public function liveMap(): JsonResponse
+    public function liveMap(Request $request): JsonResponse|Response
     {
-        // 2. ACTIVE REPORTS
-        $reports = IncidentReport::query()
-            ->with('category')
-            ->whereIn('status', ['submitted', 'in_progress', 'queued'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function ($report) {
-                return [
+        $cacheKey = LiveMapChanged::PAYLOAD_CACHE_KEY.':'.app()->getLocale();
+        $cached = Cache::remember($cacheKey, now()->addSeconds(5), function (): array {
+            $reports = IncidentReport::query()
+                ->select([
+                    'id', 'category_id', 'reference_code', 'priority', 'status', 'location_text', 'description',
+                    'reporter_name', 'contact_number', 'latitude', 'longitude', 'submitted_at', 'created_at',
+                ])
+                ->with('category:id,slug,name_translations')
+                ->whereIn('status', ['submitted', 'in_progress', 'queued'])
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(function ($report) {
+                    return [
+                        'id' => $report->id,
+                        'reference_code' => $report->reference_code,
+                        'category' => $report->category?->nameFor(app()->getLocale(), 'en') ?? 'Incident',
+                        'priority' => $report->priority ?? 'low',
+                        'status' => $report->status,
+                        'location' => $report->location_text,
+                        'description' => $report->description,
+                        'reporter_name' => $report->reporter_name,
+                        'contact_number' => $report->contact_number,
+                        'lat' => $report->latitude,
+                        'lng' => $report->longitude,
+                        'submitted_at' => ($report->submitted_at ?? $report->created_at)?->toISOString(),
+                    ];
+                })->values();
+
+            $pendingReports = IncidentReport::query()
+                ->select([
+                    'id', 'category_id', 'reference_code', 'priority', 'status', 'location_text', 'description',
+                    'reporter_name', 'contact_number', 'latitude', 'longitude', 'submitted_at', 'created_at', 'accepted_at',
+                ])
+                ->with('category:id,slug,name_translations')
+                ->whereNull('accepted_at')
+                ->where('status', '!=', 'rejected')
+                ->orderBy('created_at')
+                ->get()
+                ->map(fn ($report) => [
                     'id' => $report->id,
                     'reference_code' => $report->reference_code,
-                    'category' => $report->category?->nameFor(app()->getLocale(), 'en') ?? 'Incident',
+                    'category' => $report->category?->nameFor(app()->getLocale(), 'en') ?? 'Unclassified report',
                     'priority' => $report->priority ?? 'low',
                     'status' => $report->status,
                     'location' => $report->location_text,
                     'description' => $report->description,
                     'reporter_name' => $report->reporter_name,
                     'contact_number' => $report->contact_number,
+                    'submitted_at' => $report->submitted_at?->toISOString(),
                     'lat' => $report->latitude,
                     'lng' => $report->longitude,
-                    'time' => $report->submitted_at?->diffForHumans() ?? $report->created_at?->diffForHumans() ?? 'Unknown time',
-                ];
-            });
+                ])
+                ->values();
 
-        $pendingReports = IncidentReport::query()
-            ->with('category')
-            ->whereNull('accepted_at')
-            ->where('status', '!=', 'rejected')
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn ($report) => [
-                'id' => $report->id,
-                'reference_code' => $report->reference_code,
-                'category' => $report->category?->nameFor(app()->getLocale(), 'en') ?? 'Unclassified report',
-                'priority' => $report->priority ?? 'low',
-                'status' => $report->status,
-                'location' => $report->location_text,
-                'description' => $report->description,
-                'reporter_name' => $report->reporter_name,
-                'contact_number' => $report->contact_number,
-                'submitted_at' => $report->submitted_at?->toISOString(),
-                'lat' => $report->latitude,
-                'lng' => $report->longitude,
-            ])
-            ->values();
+            $payload = ['reports' => $reports, 'pending_reports' => $pendingReports];
 
-        // 4. RETURN WITH NO-CACHE HEADERS (Prevents hard refresh issues)
-        return response()->json([
-            'reports' => $reports,
-            'pending_reports' => $pendingReports,
-        ])->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+            return ['payload' => $payload, 'etag' => '"'.md5(json_encode($payload)).'"'];
+        });
+
+        $headers = [
+            'ETag' => $cached['etag'],
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
+        $sent = preg_replace('/^W\\//', '', trim((string) $request->header('If-None-Match')));
+        if ($sent === $cached['etag']) return response('', 304, $headers);
+        return response()->json($cached['payload'], 200, $headers);
     }
 }
